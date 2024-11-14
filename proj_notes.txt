@@ -1,0 +1,9 @@
+- PMI: post mortem interval ("Post-mortem interval (PMI) refers to the time interval between physiological death and the examination of the deceased person and is an important part of forensic death investigations.")
+- CGA: # of CGA trinucleotide repeats
+- RIN: "RNA Integrity Number (RIN) was measured by the Agilent Bioanalyzer to assess RNA quality prior to sequencing."
+-  vonsattel_grade: measure of neostriatal atrophy
+"five grades (0-4) designated in ascending order of severity"
+https://pubmed.ncbi.nlm.nih.gov/2932539/
+
+https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0143563#pone-0143563-t001 
+https://pmc.ncbi.nlm.nih.gov/articles/PMC4670106/ 
