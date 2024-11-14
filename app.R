@@ -54,7 +54,7 @@ server <- function(input, output) {
   samples_data <- eventReactive(input$samples_upload_btn, {
     file = input$samples_file
     csv = read.csv(file$datapath) 
-    csv <- csv%>% 
+    csv <- csv %>% 
       mutate(tissue = as_factor(tissue), diagnosis = as_factor(diagnosis), 
              pmi = as.integer(pmi), age_of_death = as.integer(age_of_death), 
              rin = as.numeric(rin), mrna_seq_reads = as.integer(mrna_seq_reads),
@@ -145,16 +145,20 @@ server <- function(input, output) {
 
     samples  <- samples_data()
     col_names = names(samples)[sapply(samples, is.numeric)]
-    layout_columns(
-      plotOutput("samples_boxplot"), 
-      card( 
-           radioButtons("samples_box_radio", 
-                                         label = "Choose a column visualize with boxplot!",
-                                         choices = col_names,
-                                         selected = "age_of_death"),
-                            actionButton("samples_boxplot_btn",
-                                         label = "Plot boxplot!"))
-      )})
+    sidebarLayout(
+      mainPanel(plotOutput("samples_boxplot"), 
+                plotOutput("samples_point1"), 
+                plotOutput("samples_point2"), 
+                plotOutput("samples_point3")), 
+      sidebarPanel(
+        radioButtons("samples_box_radio", 
+                     label = "Choose a column visualize with boxplot!",
+                     choices = col_names,
+                     selected = "age_of_death"),
+        actionButton("samples_boxplot_btn",
+                     label = "Plot boxplot!")
+    )
+)})
   
   # outputs samples boxplot
   output$samples_boxplot <- renderPlot({
@@ -163,6 +167,23 @@ server <- function(input, output) {
     g <- plot_samples_boxplot(samples, samples_boxplot())
     return(g)
   })
+  
+  output$samples_point1 <- renderPlot({
+    req(samples_data())
+    g <- plot_samples_scatter(samples_data(), "cag", "age_of_death")
+    return(g)
+})
+  output$samples_point2 <- renderPlot({
+    req(samples_data())
+    g <- plot_samples_scatter(samples_data(), "age_of_onset", "age_of_death")
+    return(g)
+})
+  output$samples_point3 <- renderPlot({
+    req(samples_data())
+    g <- plot_samples_scatter(samples_data(), "h_v_striatal_score", 
+                              "h_v_cortical_score", "vonsattel_grade")
+    return(g)
+})
   
 } # end server
   
