@@ -2,14 +2,18 @@
 plot_samples_scatter <- function(samples, xcol, ycol, colore = NULL) {
   g <- ggplot(samples)
   if (!is.null(colore)) {
-    # data = subset(samples, !is.na(!!sym(colore))),
-    g <- g + geom_point(aes(x = !!sym(xcol), 
-                              y = !!sym(ycol), 
-                              color = as_factor(!!sym(colore))))
-  } else {
-    g <- g + geom_point(aes(x = !!sym(xcol), y = !!sym(ycol)))
+    sbst <- samples %>%
+    filter(!is.na(!!sym(colore)))
+    g <- g + geom_point(data = sbst, 
+                        aes(x = !!sym(xcol), y = !!sym(ycol), 
+                            color = as_factor(!!sym(colore)))) +
+      scale_color_manual(values = c("#8402ab","#a40400")) 
+} else {
+    g <- g + geom_point(aes(x = !!sym(xcol), y = !!sym(ycol)), 
+                        color = "darkturquoise")
 
   }
+  g <- g + theme_linedraw()
   return(g)
 }
 
@@ -19,12 +23,17 @@ plot_samples_boxplot <- function(samples, selected_col) {
   if (selected_col %in% both) {
     g <- g +
       geom_boxplot(aes(x = diagnosis, y = !!sym(selected_col), fill = diagnosis)) + 
-      guides(fill = "none") + 
-      scale_fill_manual(values = c("skyblue", "orchid")) 
+      scale_fill_manual(values = c("#2C5F2D", "#97BC62")) 
   } else {
-    g <- g + 
-      geom_boxplot(aes(y = !!sym(selected_col)), fill = "royalblue")
+      sbst <- samples %>% 
+        filter(!is.na(!!sym(selected_col)))
+      g <- ggplot(sbst, aes(x = diagnosis, y=!!sym(selected_col))) +
+        geom_violin(width = 0.4, fill = "black") +
+        geom_boxplot(width=0.1, fill = "white") 
   }
+  g <- g + guides(fill = "none") + 
+    theme_linedraw()
+
   return(g)
 }  
 
