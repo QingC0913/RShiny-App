@@ -1,0 +1,64 @@
+
+plot_samples_scatter <- function(samples, xcol, ycol, colore = NULL) {
+  g <- ggplot(samples)
+  if (!is.null(colore)) {
+    # data = subset(samples, !is.na(!!sym(colore))),
+    g <- g + geom_point(aes(x = !!sym(xcol), 
+                              y = !!sym(ycol), 
+                              color = as_factor(!!sym(colore))))
+  } else {
+    g <- g + geom_point(aes(x = !!sym(xcol), y = !!sym(ycol)))
+
+  }
+  return(g)
+}
+
+plot_samples_boxplot <- function(samples, selected_col) {
+  both <- names(samples)[colSums(is.na(samples)) < 49]
+  g <- ggplot(samples)
+  if (selected_col %in% both) {
+    g <- g +
+      geom_boxplot(aes(x = diagnosis, y = !!sym(selected_col), fill = diagnosis)) + 
+      guides(fill = "none") + 
+      scale_fill_manual(values = c("skyblue", "orchid")) 
+  } else {
+    g <- g + 
+      geom_boxplot(aes(y = !!sym(selected_col)), fill = "royalblue")
+  }
+  return(g)
+}  
+
+process_samples_table <- function(data, sort_col, asc, row) {
+  if (is.null(sort_col)) {
+    sort_col <- colnames(data)[1]
+  }
+  if (asc == "Asc") {
+    data <- data %>% arrange(!!sym(sort_col)) 
+  }
+  else {
+    data <- data %>% arrange(desc(!!sym(sort_col))) 
+  }
+  return(head(data, row))
+} 
+
+process_samples_summary <- function(samples) {
+  # calculate means and sds of numeric values
+  means <- samples %>% summarise_if(is.numeric, mean, na.rm = TRUE) %>% round()
+  sds <- samples %>% summarise_if(is.numeric, sd, na.rm = TRUE) %>% round(2)
+  vals <- rbind(means, sds) %>% 
+    t() %>% 
+    as.data.frame() %>% 
+    rownames_to_column(var = "Column") %>% 
+    mutate(Val = paste0(V1, " (+/- ", V2, ")")) %>%
+    select(c(Column, Val))
+  
+  # combine values into summary table
+  summary_table <- as.data.frame(colnames(samples))
+  colnames(summary_table)[1] <- "Column"
+  summary_table <- summary_table %>% 
+    mutate("Type" = sapply(samples, FUN = class)) %>% 
+    left_join(vals, join_by(Column))
+  summary_table$Val[1] <- paste(levels(samples$tissue), collapse = ", ")
+  summary_table$Val[2] <- paste(levels(samples$diagnosis), collapse = ", ")
+  return(summary_table)
+}
