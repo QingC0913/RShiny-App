@@ -22,7 +22,7 @@ ui <- fluidPage(
                               "Please upload a RNA sequencing data file.",
                               multiple = F, 
                               accept = ".csv"), 
-                    actionButton("samples_upload_btn", "Submit")
+                    actionButton("samples_upload_btn", "Upload")
                     ), 
                   mainPanel(
                     tabsetPanel(
@@ -45,18 +45,14 @@ ui <- fluidPage(
                               label = "Please upload a counts matrix file.", 
                               multiple = F, 
                               accept = ".csv"),
-                    sliderInput("var_slider", 
-                                label = "min percentile of variance", 
-                                min = 0,
-                                value = 50, 
-                                max = 100), 
-                    uiOutput("counts_zero_slider"),
-                    actionButton("counts_upload_btn", "Submit")
+                    actionButton("counts_upload_btn", "Upload"), 
+                    uiOutput("counts_param")
                   ), 
                   mainPanel(
                     tabsetPanel(
                       tabPanel("tab1", 
-                               tableOutput("placeholder")), 
+                               # tableOutput("placeholder"),
+                               tableOutput("counts_summary")), 
                       tabPanel("tab2"), 
                       tabPanel("tab3"), 
                       tabPanel("tab4")
@@ -72,18 +68,48 @@ server <- function(input, output) {
   #####               COUNTS TAB            #####
   counts_data <- eventReactive(input$counts_upload_btn, {
     file = input$counts_file
-    csv = read.csv(file$datapath) 
-    # cols = csv
-    return(csv[1:10, 1:10])
+    counts = read.csv(file$datapath) 
+    return(counts[1:10, 1:11])
   })
   
-  output$counts_zero_slider <- renderUI({
+  output$counts_param <- renderUI({
     req(counts_data())
-    sliderInput("zero_slider", 
-                label = "min non-zero samples", 
-                min = 0, 
-                value = 10,
-                max = ncol(counts_data()))
+    tagList(
+      sliderInput("counts_var_slider", 
+                  label = "min percentile of variance", 
+                  min = 0,
+                  value = 100, 
+                  max = 100),
+      sliderInput("counts_nonzero_slider", 
+                  label = "min non-zero samples", 
+                  min = 0, 
+                  value = 0, 
+                  max = ncol(counts_data()) - 1, # first col is GeneID
+                  step = 1), 
+      actionButton("counts_btn", "Submit")
+    )
+  })
+  
+  counts_summ_reactives <- reactiveValues(var_perc = NULL,    
+                                          nonzeros = NULL)
+  observeEvent(input$counts_btn, {
+    counts_summ_reactives$var_perc <- input$counts_var_slider
+    counts_summ_reactives$nonzeros <- input$counts_nonzero_slider
+  })
+  
+  output$counts_summary <- renderTable({
+    req(counts_data())
+    
+    counts <- counts_data()
+    
+    min_nonzeros <- counts_summ_reactives$nonzeros 
+    if (is.null(min_nonzeros)) {
+      return(counts)
+    }
+    # exclude first column which is geneID
+    filtered <- counts[rowSums(counts[-1] != 0) >= min_nonzeros,] 
+
+    return(filtered)
   })
   
   output$placeholder <- renderTable({
