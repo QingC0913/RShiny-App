@@ -1,19 +1,22 @@
 
 plot_samples_scatter <- function(samples, xcol, ycol, colore = NULL) {
-  g <- ggplot(samples)
+  g <- ggplot(samples) + theme_linedraw()
   if (!is.null(colore)) {
     sbst <- samples %>%
     filter(!is.na(!!sym(colore)))
     g <- g + geom_point(data = sbst, 
                         aes(x = !!sym(xcol), y = !!sym(ycol), 
-                            color = as_factor(!!sym(colore)))) +
-      scale_color_manual(values = c("#8402ab","#a40400")) 
+                            color = as_factor(!!sym(colore))), 
+                            size = 3) +
+      scale_color_manual(values = c("#8402ab","darkturquoise"), 
+                         name = colore) +
+      theme(legend.position = "bottom")
 } else {
     g <- g + geom_point(aes(x = !!sym(xcol), y = !!sym(ycol)), 
-                        color = "darkturquoise")
+                        color = "darkturquoise",  size = 3)
 
   }
-  g <- g + theme_linedraw()
+  # g <- g 
   return(g)
 }
 
@@ -28,8 +31,9 @@ plot_samples_boxplot <- function(samples, selected_col) {
       sbst <- samples %>% 
         filter(!is.na(!!sym(selected_col)))
       g <- ggplot(sbst, aes(x = diagnosis, y=!!sym(selected_col))) +
-        geom_violin(width = 0.4, fill = "black") +
-        geom_boxplot(width=0.1, fill = "white") 
+        geom_violin(width = 0.4, fill = "#2C5F2D") +
+        geom_boxplot(width=0.1, fill = "#97BC62") + 
+        geom_jitter(color= "black", size = 0.8)
   }
   g <- g + guides(fill = "none") + 
     theme_linedraw()

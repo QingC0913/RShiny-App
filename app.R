@@ -14,7 +14,6 @@ library(bslib) # to validate csv files
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
-   mainPanel(
      tabsetPanel(
        tabPanel("Samples", 
                 sidebarLayout(
@@ -22,8 +21,7 @@ ui <- fluidPage(
                     fileInput("samples_file", 
                               "Please upload a RNA sequencing data file.",
                               multiple = F, 
-                              accept = ".csv"
-                             ), 
+                              accept = ".csv"), 
                     actionButton("samples_upload_btn", "Submit")
                     ), 
                   mainPanel(
@@ -40,14 +38,58 @@ ui <- fluidPage(
                   )
                 )
               ), 
-       tabPanel("Counts"), 
+       tabPanel("Counts", 
+                sidebarLayout(
+                  sidebarPanel(
+                    fileInput("counts_file", 
+                              label = "Please upload a counts matrix file.", 
+                              multiple = F, 
+                              accept = ".csv"),
+                    sliderInput("var_slider", 
+                                label = "min percentile of variance", 
+                                min = 0,
+                                value = 50, 
+                                max = 100), 
+                    uiOutput("counts_zero_slider"),
+                    actionButton("counts_upload_btn", "Submit")
+                  ), 
+                  mainPanel(
+                    tabsetPanel(
+                      tabPanel("tab1", 
+                               tableOutput("placeholder")), 
+                      tabPanel("tab2"), 
+                      tabPanel("tab3"), 
+                      tabPanel("tab4")
+                    )
+                  )
+                )), 
        tabPanel("DE"), 
        tabPanel("TODO")
       )
-   )
 )
 
 server <- function(input, output) {
+  #####               COUNTS TAB            #####
+  counts_data <- eventReactive(input$counts_upload_btn, {
+    file = input$counts_file
+    csv = read.csv(file$datapath) 
+    # cols = csv
+    return(csv[1:10, 1:10])
+  })
+  
+  output$counts_zero_slider <- renderUI({
+    req(counts_data())
+    sliderInput("zero_slider", 
+                label = "min non-zero samples", 
+                min = 0, 
+                value = 10,
+                max = ncol(counts_data()))
+  })
+  
+  output$placeholder <- renderTable({
+    req(counts_data())
+    return(counts_data())
+  })
   
   #####               SAMPLES TAB            #####
   # loads file data when submit button is pressed
@@ -149,9 +191,9 @@ server <- function(input, output) {
       mainPanel(plotOutput("samples_boxplot"), 
                 plotOutput("samples_point1"), 
                 plotOutput("samples_point2"), 
-                plotOutput("samples_point3")), 
+                plotOutput("samples_point3")),
       sidebarPanel(
-        radioButtons("samples_box_radio", 
+        radioButtons("samples_box_radio",
                      label = "Choose a column visualize with boxplot!",
                      choices = col_names,
                      selected = "age_of_death"),
@@ -159,7 +201,7 @@ server <- function(input, output) {
                      label = "Plot boxplot!")
     )
 )})
-  
+
   # outputs samples boxplot
   output$samples_boxplot <- renderPlot({
     req(samples_data())
