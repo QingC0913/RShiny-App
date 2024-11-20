@@ -11,6 +11,8 @@ library(shiny)
 library(tidyverse)
 library(rlang) # make sure col names can be used in shiny
 library(bslib) # to validate csv files
+library(glue) # string concats
+
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -66,12 +68,14 @@ ui <- fluidPage(
 
 server <- function(input, output) {
   #####               COUNTS TAB            #####
+  # get counts data from file
   counts_data <- eventReactive(input$counts_upload_btn, {
     file = input$counts_file
     counts = read.csv(file$datapath) 
     return(counts[1:10, 1:11])
   })
   
+  # render counts data params when counts data is available
   output$counts_param <- renderUI({
     req(counts_data())
     tagList(
@@ -100,16 +104,33 @@ server <- function(input, output) {
   output$counts_summary <- renderTable({
     req(counts_data())
     
-    counts <- counts_data()
-    
+    counts <- counts_data()[-1]
     min_nonzeros <- counts_summ_reactives$nonzeros 
+    var_percentile <- counts_summ_reactives$var_perc
+    
+    results <- data.frame(matrix(ncol = 2, nrow = 4))
+    results[, 1] <- c("Total samples", "Total genes", "Genes passing filter", "Genes not passing filter")
+    colnames(results) <- NULL
+    
     if (is.null(min_nonzeros)) {
-      return(counts)
+      min_zeros <- input$counts_nonzero_slider # use initial slider values
+      var_percentile <- input$counts_var_slider
     }
-    # exclude first column which is geneID
-    filtered <- counts[rowSums(counts[-1] != 0) >= min_nonzeros,] 
-
-    return(filtered)
+    # filter by nonzeros
+    filtered <- counts[rowSums(counts != 0) >= min_nonzeros,] 
+    #filter by variance
+    filtered["variance"] <- apply(filtered, MARGIN = 1, FUN = var, na.rm = T)
+    var_threshold <- var_percentile / 100 * max(filtered$variance)
+    filtered <- filtered %>% 
+      filter(variance <= var_threshold) %>% 
+      select(-variance)
+    
+    tot_genes <- nrow(counts)
+    filtered_genes <- nrow(filtered) 
+    results[, 2] <- c(ncol(counts), tot_genes, 
+                      glue("{filtered_genes} ({filtered_genes/tot_genes*100}%)"), 
+                         glue("{tot_genes -  filtered_genes} ({(tot_genes - filtered_genes) / tot_genes * 100}%)" ))
+    return(results)
   })
   
   output$placeholder <- renderTable({
