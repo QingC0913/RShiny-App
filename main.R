@@ -1,4 +1,31 @@
-
+process_counts_filters <- function(counts, min_nonzeros, var_percentile) {
+  print(head(counts))
+  # filter by nonzeros
+  filtered <- counts[rowSums(counts != 0) >= min_nonzeros,] 
+  #filter by variance
+  filtered["variance"] <- apply(filtered, MARGIN = 1, FUN = var, na.rm = T)
+  print(min_nonzeros)
+  print(var_percentile)
+  print(filtered)
+  var_threshold <- var_percentile / 100 * max(filtered$variance, na.rm = T)
+  filtered <- filtered %>% 
+    filter(variance <= var_threshold) 
+  
+  return(filtered)
+}
+process_counts_summary <- function(counts, filtered) {
+  results <- data.frame(matrix(ncol = 2, nrow = 4))
+  results[, 1] <- c("Total samples", "Total genes", "Genes passing filter", "Genes not passing filter")
+  colnames(results) <- NULL
+  tot_genes <- nrow(counts)
+  filtered_genes <- nrow(filtered) 
+  results[, 2] <- c(ncol(counts), tot_genes, 
+                    glue("{filtered_genes} ({filtered_genes/tot_genes*100}%)"), 
+                    glue("{tot_genes -  filtered_genes} ({(tot_genes - filtered_genes) / tot_genes * 100}%)" ))
+  return(results)
+}
+  
+  
 plot_samples_scatter <- function(samples, xcol, ycol, colore = NULL) {
   g <- ggplot(samples) + theme_linedraw()
   if (!is.null(colore)) {

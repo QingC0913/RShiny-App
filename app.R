@@ -53,9 +53,10 @@ ui <- fluidPage(
                   mainPanel(
                     tabsetPanel(
                       tabPanel("tab1", 
-                               # tableOutput("placeholder"),
                                tableOutput("counts_summary")), 
-                      tabPanel("tab2"), 
+                      tabPanel("tab2", 
+                               tableOutput("counts_var_plot1"), 
+                               plotOutput("counts_var_plot2")), 
                       tabPanel("tab3"), 
                       tabPanel("tab4")
                     )
@@ -101,41 +102,60 @@ server <- function(input, output) {
     counts_summ_reactives$nonzeros <- input$counts_nonzero_slider
   })
   
+  # outputs counts summary
   output$counts_summary <- renderTable({
     req(counts_data())
     
-    counts <- counts_data()[-1]
+    counts <- counts_data()[-1] # remove geneID column
     min_nonzeros <- counts_summ_reactives$nonzeros 
     var_percentile <- counts_summ_reactives$var_perc
-    
-    results <- data.frame(matrix(ncol = 2, nrow = 4))
-    results[, 1] <- c("Total samples", "Total genes", "Genes passing filter", "Genes not passing filter")
-    colnames(results) <- NULL
     
     if (is.null(min_nonzeros)) {
       min_zeros <- input$counts_nonzero_slider # use initial slider values
       var_percentile <- input$counts_var_slider
     }
-    # filter by nonzeros
-    filtered <- counts[rowSums(counts != 0) >= min_nonzeros,] 
-    #filter by variance
-    filtered["variance"] <- apply(filtered, MARGIN = 1, FUN = var, na.rm = T)
-    var_threshold <- var_percentile / 100 * max(filtered$variance)
-    filtered <- filtered %>% 
-      filter(variance <= var_threshold) %>% 
-      select(-variance)
-    
-    tot_genes <- nrow(counts)
-    filtered_genes <- nrow(filtered) 
-    results[, 2] <- c(ncol(counts), tot_genes, 
-                      glue("{filtered_genes} ({filtered_genes/tot_genes*100}%)"), 
-                         glue("{tot_genes -  filtered_genes} ({(tot_genes - filtered_genes) / tot_genes * 100}%)" ))
+    filtered <- process_counts_filters(counts, min_nonzeros, var_percentile)
+    results <- process_counts_summary(counts, filtered)
     return(results)
   })
   
-  output$placeholder <- renderTable({
+  output$counts_var_plot1 <- renderTable({
     req(counts_data())
-    return(counts_data())
+    
+    counts <- counts_data()[-1] # remove geneID column
+    min_nonzeros <- counts_summ_reactives$nonzeros 
+    var_percentile <- counts_summ_reactives$var_perc
+    
+    if (is.null(min_nonzeros)) {
+      min_nonzeros <- input$counts_nonzero_slider # use initial slider values
+      var_percentile <- input$counts_var_slider
+    }
+    filtered <- process_counts_filters(counts, min_nonzeros, var_percentile)
+    filtered["medians"] <- apply(filtered, MARGIN = 1, FUN = median)
+    filtered["num_zeros"] <- apply(filtered, MARGIN = 1, FUN = function(x) {
+      sum(x == 0)
+    })
+    return(filtered)
+  })
+  
+  output$counts_var_plot2 <- renderPlot({
+    req(counts_data())
+    
+    counts <- counts_data()[-1] # remove geneID column
+    min_nonzeros <- counts_summ_reactives$nonzeros 
+    var_percentile <- counts_summ_reactives$var_perc
+    
+    if (is.null(min_nonzeros)) {
+      min_nonzeros <- input$counts_nonzero_slider # use initial slider values
+      var_percentile <- input$counts_var_slider
+    }
+    filtered <- process_counts_filters(counts, min_nonzeros, var_percentile)
+    filtered["medians"] <- apply(filtered, MARGIN = 1, FUN = median)
+    filtered["num_zeros"] <- apply(filtered, MARGIN = 1, FUN = function(x) {
+      sum(x == 0)
+    })
+    g <- ggplot(filtered) + geom_point(aes(x = !!sym("medians"), y = !!sym("variance")))
+    return(g)
   })
   
   #####               SAMPLES TAB            #####
