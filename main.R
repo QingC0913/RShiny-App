@@ -1,20 +1,24 @@
-process_counts_filters <- function(counts, min_nonzeros, var_percentile) {
-  print(head(counts))
+# if names == 1: return rownames / genes
+# if names == 0: return table of filtered genes
+process_counts_filters <- function(counts, min_nonzeros, var_percentile, names = 0) {
+  print("in process_counts_filters")
   # filter by nonzeros
-  filtered <- counts[rowSums(counts != 0) >= min_nonzeros,] 
+  filtered <- counts[rowSums(counts[-1] != 0) >= min_nonzeros,] 
   #filter by variance
-  filtered["variance"] <- apply(filtered, MARGIN = 1, FUN = var, na.rm = T)
-  print(min_nonzeros)
-  print(var_percentile)
-  print(filtered)
+  filtered["variance"] <- apply(filtered[-1], MARGIN = 1, FUN = var, na.rm = T)
   var_threshold <- var_percentile / 100 * max(filtered$variance, na.rm = T)
-  filtered <- filtered %>% 
-    filter(variance <= var_threshold) %>%
-    select(-variance)
-  
-  return(filtered)
+  filtered <- filtered[filtered$variance <= var_threshold, ]
+  filtered["variance"] <- NULL
+  print(nrow(filtered))
+  if (names == 0) {
+    return(filtered)
+  } else {
+    return(rownames(filtered))
+  }
+ 
 }
 process_counts_summary <- function(counts, filtered) {
+  counts <- counts[-1] # get rid of GeneID column
   results <- data.frame(matrix(ncol = 2, nrow = 4))
   results[, 1] <- c("Total samples", "Total genes", "Genes passing filter", "Genes not passing filter")
   colnames(results) <- NULL

@@ -55,7 +55,7 @@ ui <- fluidPage(
                       tabPanel("Summary", 
                                tableOutput("counts_summary")), 
                       tabPanel("Diagnostic Plots", 
-                               # tableOutput("counts_var_plot"), 
+                               tableOutput("counts_var_plot"),
                                plotOutput("counts_var_plot1"), 
                                plotOutput("counts_var_plot2")), 
                       tabPanel("Heatmap"), 
@@ -74,9 +74,10 @@ server <- function(input, output) {
   counts_data <- eventReactive(input$counts_upload_btn, {
     file = input$counts_file
     counts = read.csv(file$datapath) 
+    genes <- counts$GeneID
+    rownames(counts) <- genes
+    counts <- counts[1:10, 1:11]
     return(counts)
-    # return(counts[1:10, 1:11])
-    
   })
   
   # render counts data params when counts data is available
@@ -109,7 +110,7 @@ server <- function(input, output) {
   output$counts_summary <- renderTable({
     req(counts_data())
     
-    counts <- counts_data()[-1] # remove geneID column
+    counts <- counts_data()[-1]# remove geneID column
     min_nonzeros <- counts_summ_reactives$nonzeros 
     var_percentile <- counts_summ_reactives$var_perc
     
@@ -142,25 +143,39 @@ server <- function(input, output) {
   output$counts_var_plot1 <- renderPlot({
     req(counts_data())
     
-    counts <- counts_data()[-1] # remove geneID column
+    counts <- counts_data()
     min_nonzeros <- counts_summ_reactives$nonzeros 
     var_percentile <- counts_summ_reactives$var_perc
     
     if (is.null(min_nonzeros)) {
-      min_nonzeros <- input$counts_nonzero_slider # use initial slider values
+      min_zeros <- input$counts_nonzero_slider # use initial slider values
       var_percentile <- input$counts_var_slider
     }
+    # min_nonzeros <- ifelse(is.null(counts_summ_reactives$nonzeros), 
+    #                        input$counts_nonzero_slider, 
+    #                        counts_summ_reactives$nonzeros)
+    # var_percentile <- ifelse(is.null(counts_summ_reactives$var_perc), 
+    #                          input$counts_var_slider, 
+    #                          counts_summ_reactives$var_perc)
     filtered <- process_counts_filters(counts, min_nonzeros, var_percentile)
-    filtered["variance"] <- apply(filtered, MARGIN = 1, FUN = var, na.rm = T)
-    filtered["medians"] <- apply(filtered, MARGIN = 1, FUN = median, na.rm = T)
-    g <- ggplot(filtered) + geom_point(aes(x = log2(!!sym("medians")), y = log10(!!sym("variance"))))
+    
+    keep <- rownames(filtered)
+    print("rownames?? ### in renderPlot")
+    print(keep)
+    counts["keep"] <- rownames(counts) %in% keep
+    counts["variance"] <- apply(counts, MARGIN = 1, FUN = var, na.rm = T)
+    counts["medians"] <- apply(counts, MARGIN = 1, FUN = median, na.rm = T)
+    g <- ggplot(counts) + 
+      geom_point(aes(x = log2(!!sym("medians")), 
+                     y = log10(!!sym("variance")), 
+                 color = !!sym("keep")))
     return(g)
   })
   
   output$counts_var_plot2 <- renderPlot({
     req(counts_data())
     
-    counts <- counts_data()[-1] # remove geneID column
+    counts <- counts_data()# remove geneID column
     min_nonzeros <- counts_summ_reactives$nonzeros 
     var_percentile <- counts_summ_reactives$var_perc
     
@@ -169,6 +184,10 @@ server <- function(input, output) {
       var_percentile <- input$counts_var_slider
     }
     filtered <- process_counts_filters(counts, min_nonzeros, var_percentile)
+    
+    counts
+    
+    
     filtered["medians"] <- apply(filtered, MARGIN = 1, FUN = median)
     filtered["num_zeros"] <- apply(filtered, MARGIN = 1, FUN = function(x) {
       sum(x == 0)
