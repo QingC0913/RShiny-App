@@ -154,7 +154,7 @@ server <- function(input, output) {
     filtered["num_zeros"] <- apply(filtered, MARGIN = 1, FUN = function(x) {
       sum(x == 0)
     })
-    g <- ggplot(filtered) + geom_point(aes(x = !!sym("medians"), y = !!sym("variance")))
+    g <- ggplot(filtered) + geom_point(aes(x = log2(!!sym("medians")), y = log10(!!sym("variance"))))
     return(g)
   })
   
