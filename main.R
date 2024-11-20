@@ -9,7 +9,8 @@ process_counts_filters <- function(counts, min_nonzeros, var_percentile) {
   print(filtered)
   var_threshold <- var_percentile / 100 * max(filtered$variance, na.rm = T)
   filtered <- filtered %>% 
-    filter(variance <= var_threshold) 
+    filter(variance <= var_threshold) %>%
+    select(-variance)
   
   return(filtered)
 }
