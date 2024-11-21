@@ -1,7 +1,29 @@
-# if names == 1: return rownames / genes
-# if names == 0: return table of filtered genes
+plot_counts_scatter <- function(counts, val) {
+  g <- ggplot(counts) + 
+    theme_linedraw() +
+    scale_color_manual(values = c("TRUE" = "forestgreen", # todo change colors
+                                  "FALSE" = "skyblue"),
+                       name = "Gene Passes Filters", 
+                       labels=c("True", "False")) 
+  if (val == 1) {
+    g <- g + geom_point(aes(x = log2(!!sym("medians") + 1), 
+                            y = log10(!!sym("variance") + 1), 
+                            color = !!sym("keep")), 
+                        size = 3) +
+      # coord_cartesian(xlim = c(-15, 6.25)) + 
+      labs(x = "Log2(Median)", y = "Log10(Variance)", title = "Median Count vs. Variance")
+  } else {
+    g <- g + geom_point(aes(x = log2(!!sym("medians") + 1), 
+                            y = !!sym("num_zeros"), 
+                            color = !!sym("keep")),
+                        size = 3) +
+      # coord_cartesian(xlim = c(-15, 6.25), ) + 
+      labs(x = "Log2(Median)", y = "Number of Zeros", title = "Median Count vs. Number of Zeros")
+  }
+  return(g)
+}
+
 process_counts_filters <- function(counts, min_nonzeros, var_percentile, names = 0) {
-  print("in process_counts_filters")
   # filter by nonzeros
   filtered <- counts[rowSums(counts[-1] != 0) >= min_nonzeros,] 
   #filter by variance
@@ -9,7 +31,6 @@ process_counts_filters <- function(counts, min_nonzeros, var_percentile, names =
   var_threshold <- var_percentile / 100 * max(filtered$variance, na.rm = T)
   filtered <- filtered[filtered$variance <= var_threshold, ]
   filtered["variance"] <- NULL
-  print(nrow(filtered))
   if (names == 0) {
     return(filtered)
   } else {
@@ -17,6 +38,7 @@ process_counts_filters <- function(counts, min_nonzeros, var_percentile, names =
   }
  
 }
+
 process_counts_summary <- function(counts, filtered) {
   counts <- counts[-1] # get rid of GeneID column
   results <- data.frame(matrix(ncol = 2, nrow = 4))
@@ -29,7 +51,6 @@ process_counts_summary <- function(counts, filtered) {
                     glue("{tot_genes -  filtered_genes} ({(tot_genes - filtered_genes) / tot_genes * 100}%)" ))
   return(results)
 }
-  
   
 plot_samples_scatter <- function(samples, xcol, ycol, colore = NULL) {
   g <- ggplot(samples) + theme_linedraw()
@@ -48,7 +69,6 @@ plot_samples_scatter <- function(samples, xcol, ycol, colore = NULL) {
                         color = "darkturquoise",  size = 3)
 
   }
-  # g <- g 
   return(g)
 }
 

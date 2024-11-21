@@ -12,7 +12,7 @@ library(tidyverse)
 library(rlang) # make sure col names can be used in shiny
 library(bslib) # to validate csv files
 library(glue) # string concats
-
+library(fields) # heatmap legend
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -55,10 +55,11 @@ ui <- fluidPage(
                       tabPanel("Summary", 
                                tableOutput("counts_summary")), 
                       tabPanel("Diagnostic Plots", 
-                               tableOutput("counts_var_plot"),
-                               plotOutput("counts_var_plot1"), 
-                               plotOutput("counts_var_plot2")), 
-                      tabPanel("Heatmap"), 
+                               # tableOutput("counts_var_plot"),
+                               plotOutput("counts_var_plot1"),
+                               plotOutput("counts_var_plot2")),
+                      tabPanel("Heatmap", 
+                               plotOutput("counts_heatmap")), 
                       tabPanel("PCA")
                     )
                   )
@@ -76,7 +77,7 @@ server <- function(input, output) {
     counts = read.csv(file$datapath) 
     genes <- counts$GeneID
     rownames(counts) <- genes
-    counts <- counts[1:10, 1:11]
+    # counts <- counts[1:10, 1:11]
     return(counts)
   })
   
@@ -99,103 +100,74 @@ server <- function(input, output) {
     )
   })
   
-  counts_summ_reactives <- reactiveValues(var_perc = NULL,    
-                                          nonzeros = NULL)
+  counts_summ_reactives <- reactiveValues(var_perc = 100,    
+                                          nonzeros = 0)
   observeEvent(input$counts_btn, {
     counts_summ_reactives$var_perc <- input$counts_var_slider
     counts_summ_reactives$nonzeros <- input$counts_nonzero_slider
   })
-  
+
   # outputs counts summary
   output$counts_summary <- renderTable({
     req(counts_data())
-    
-    counts <- counts_data()[-1]# remove geneID column
-    min_nonzeros <- counts_summ_reactives$nonzeros 
+    counts <- counts_data()
+    min_nonzeros <- counts_summ_reactives$nonzeros
     var_percentile <- counts_summ_reactives$var_perc
-    
-    if (is.null(min_nonzeros)) {
-      min_zeros <- input$counts_nonzero_slider # use initial slider values
-      var_percentile <- input$counts_var_slider
-    }
-    filtered <- process_counts_filters(counts, min_nonzeros, var_percentile)
+    filtered <- process_counts_filters(counts, min_nonzeros, var_percentile, 0)
     results <- process_counts_summary(counts, filtered)
     return(results)
   })
   
-  output$counts_var_plot <- renderTable({
-    req(counts_data())
-    
-    counts <- counts_data()[-1] # remove geneID column
-    min_nonzeros <- counts_summ_reactives$nonzeros 
-    var_percentile <- counts_summ_reactives$var_perc
-    
-    if (is.null(min_nonzeros)) {
-      min_nonzeros <- input$counts_nonzero_slider # use initial slider values
-      var_percentile <- input$counts_var_slider
-    }
-    filtered <- process_counts_filters(counts, min_nonzeros, var_percentile)
-    filtered["variance"] <- apply(filtered, MARGIN = 1, FUN = var, na.rm = T)
-    filtered["medians"] <- apply(filtered, MARGIN = 1, FUN = median, na.rm = T)
-    return(filtered)
-  })
-  
+  # outputs counts plot of median counts vs. variance
   output$counts_var_plot1 <- renderPlot({
     req(counts_data())
-    
     counts <- counts_data()
-    min_nonzeros <- counts_summ_reactives$nonzeros 
+    min_nonzeros <- counts_summ_reactives$nonzeros
     var_percentile <- counts_summ_reactives$var_perc
-    
-    if (is.null(min_nonzeros)) {
-      min_zeros <- input$counts_nonzero_slider # use initial slider values
-      var_percentile <- input$counts_var_slider
-    }
-    # min_nonzeros <- ifelse(is.null(counts_summ_reactives$nonzeros), 
-    #                        input$counts_nonzero_slider, 
-    #                        counts_summ_reactives$nonzeros)
-    # var_percentile <- ifelse(is.null(counts_summ_reactives$var_perc), 
-    #                          input$counts_var_slider, 
-    #                          counts_summ_reactives$var_perc)
-    filtered <- process_counts_filters(counts, min_nonzeros, var_percentile)
-    
-    keep <- rownames(filtered)
-    print("rownames?? ### in renderPlot")
-    print(keep)
-    counts["keep"] <- rownames(counts) %in% keep
-    counts["variance"] <- apply(counts, MARGIN = 1, FUN = var, na.rm = T)
-    counts["medians"] <- apply(counts, MARGIN = 1, FUN = median, na.rm = T)
-    g <- ggplot(counts) + 
-      geom_point(aes(x = log2(!!sym("medians")), 
-                     y = log10(!!sym("variance")), 
-                 color = !!sym("keep")))
+    keep <- process_counts_filters(counts, min_nonzeros, var_percentile, 1)
+
+    v <- apply(counts[-1], MARGIN = 1, FUN = var, na.rm = T)
+    m <- apply(counts[-1], MARGIN = 1, FUN = median, na.rm = T)
+    k <- rownames(counts) %in% keep
+
+    df <- data.frame(variance = v, medians = m, keep = k)
+    g <- plot_counts_scatter(df, 1)
     return(g)
   })
   
+  # outputs counts plot of median counts vs. num of zeros
   output$counts_var_plot2 <- renderPlot({
     req(counts_data())
-    
-    counts <- counts_data()# remove geneID column
-    min_nonzeros <- counts_summ_reactives$nonzeros 
+    counts <- counts_data()
+    min_nonzeros <- counts_summ_reactives$nonzeros
     var_percentile <- counts_summ_reactives$var_perc
-    
-    if (is.null(min_nonzeros)) {
-      min_nonzeros <- input$counts_nonzero_slider # use initial slider values
-      var_percentile <- input$counts_var_slider
-    }
-    filtered <- process_counts_filters(counts, min_nonzeros, var_percentile)
-    
-    counts
-    
-    
-    filtered["medians"] <- apply(filtered, MARGIN = 1, FUN = median)
-    filtered["num_zeros"] <- apply(filtered, MARGIN = 1, FUN = function(x) {
-      sum(x == 0)
-    })
-    g <- ggplot(filtered) + geom_point(aes(x = log2(!!sym("medians")), 
-                                           y = !!sym("num_zeros")))
+    keep <- process_counts_filters(counts, min_nonzeros, var_percentile, 1)
+
+    n_z <- apply(counts[-1], MARGIN = 1, FUN = function(x) {sum(x == 0)})
+    m <- apply(counts[-1], MARGIN = 1, FUN = median, na.rm = T)
+    k <- rownames(counts) %in% keep
+
+    df <- data.frame(num_zeros = n_z, medians = m, keep = k)
+    g <- plot_counts_scatter(df, 2)
     return(g)
   })
+  
+  output$counts_heatmap <- renderPlot({
+    req(counts_data())
+    counts <- counts_data()
+    min_nonzeros <- counts_summ_reactives$nonzeros
+    var_percentile <- counts_summ_reactives$var_perc
+    filtered <- process_counts_filters(counts, min_nonzeros, var_percentile, 0)
+    mat <- log2(filtered[-1] + 1) %>% as.matrix()
+    colors <- colorRampPalette(c("red", "white", "black"))(15)
+    
+    heatmap(mat, col = colors)
+    image.plot(legend.only = TRUE, 
+               zlim = range(mat, na.rm = TRUE), 
+               col = colors,
+               legend.lab = "Normalized Counts")
+  })
+  
   
   #####               SAMPLES TAB            #####
   # loads file data when submit button is pressed
