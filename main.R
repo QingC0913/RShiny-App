@@ -1,16 +1,16 @@
 plot_counts_scatter <- function(counts, val) {
+  print(counts)
+  counts$keep <- factor(counts$keep, levels = c("TRUE", "FALSE"))
   g <- ggplot(counts) + 
     theme_linedraw() +
-    scale_color_manual(values = c("TRUE" = "forestgreen", # todo change colors
-                                  "FALSE" = "skyblue"),
-                       name = "Gene Passes Filters", 
-                       labels=c("True", "False")) 
+    scale_color_manual(name = "Gene Passes Filters", 
+                       values = c("TRUE" = "forestgreen", "FALSE" = "skyblue"),
+                       labels = c("TRUE" = "True", "FALSE" = "False")) 
   if (val == 1) {
     g <- g + geom_point(aes(x = log2(!!sym("medians") + 1), 
                             y = log10(!!sym("variance") + 1), 
                             color = !!sym("keep")), 
                         size = 3) +
-      # coord_cartesian(xlim = c(-15, 6.25)) + 
       labs(x = "Log2(Median)", y = "Log10(Variance)", title = "Median Count vs. Variance")
   } else {
     g <- g + geom_point(aes(x = log2(!!sym("medians") + 1), 
