@@ -67,7 +67,25 @@ ui <- fluidPage(
                       )
                   )
                 )), 
-       tabPanel("DE"), 
+       tabPanel("DE", 
+                tabsetPanel(
+                  tabPanel("tab1"), 
+                  tabPanel("tab2"), 
+                  tabPanel("tab3", 
+                           conditionalPanel("input.tabs == 'tab3' || input.tabs == 'tab4'", 
+                                            sidebarPanel(
+                                              sliderInput("adfasd", label = "asdfs", 
+                                                          min = 0, max = 10, value = 0)
+                                            ))), 
+                  tabPanel("tab4", 
+                           conditionalPanel("input.tabs == 'tab3' || input.tabs == 'tab4'", 
+                                            sidebarPanel(
+                                              sliderInput("adfasd", label = "asdfs", 
+                                                          min = 0, max = 10, value = 0)
+                                            ))), 
+                  tabPanel("tab5")
+                )
+                ), 
        tabPanel("TODO")
       )
 )
@@ -115,9 +133,8 @@ server <- function(input, output) {
   output$counts_summary <- renderTable({
     req(counts_data())
     counts <- counts_data()
-    min_nonzeros <- counts_summ_reactives$nonzeros
-    var_percentile <- counts_summ_reactives$var_perc
-    filtered <- process_counts_filters(counts, min_nonzeros, var_percentile, 0)
+    filtered <- process_counts_filters(counts, counts_summ_reactives$nonzeros, 
+                                       counts_summ_reactives$var_perc, 0)
     results <- process_counts_summary(counts, filtered)
     return(results)
   })
@@ -126,9 +143,8 @@ server <- function(input, output) {
   output$counts_var_plot1 <- renderPlot({
     req(counts_data())
     counts <- counts_data()
-    min_nonzeros <- counts_summ_reactives$nonzeros
-    var_percentile <- counts_summ_reactives$var_perc
-    keep <- process_counts_filters(counts, min_nonzeros, var_percentile, 1)
+    keep <- process_counts_filters(counts, counts_summ_reactives$nonzeros,
+                                   counts_summ_reactives$var_perc, 1)
 
     v <- apply(counts[-1], MARGIN = 1, FUN = var, na.rm = T)
     m <- apply(counts[-1], MARGIN = 1, FUN = median, na.rm = T)
@@ -143,9 +159,8 @@ server <- function(input, output) {
   output$counts_var_plot2 <- renderPlot({
     req(counts_data())
     counts <- counts_data()
-    min_nonzeros <- counts_summ_reactives$nonzeros
-    var_percentile <- counts_summ_reactives$var_perc
-    keep <- process_counts_filters(counts, min_nonzeros, var_percentile, 1)
+    keep <- process_counts_filters(counts, counts_summ_reactives$nonzeros,
+                                   counts_summ_reactives$var_perc, 1)
 
     n_z <- apply(counts[-1], MARGIN = 1, FUN = function(x) {sum(x == 0)})
     m <- apply(counts[-1], MARGIN = 1, FUN = median, na.rm = T)
@@ -158,10 +173,8 @@ server <- function(input, output) {
   
   output$counts_heatmap <- renderPlot({
     req(counts_data())
-    counts <- counts_data()
-    min_nonzeros <- counts_summ_reactives$nonzeros
-    var_percentile <- counts_summ_reactives$var_perc
-    filtered <- process_counts_filters(counts, min_nonzeros, var_percentile, 0)
+    filtered <- process_counts_filters(counts_data(), counts_summ_reactives$nonzeros, 
+                                       counts_summ_reactives$var_perc, 0)
     mat <- log2(filtered[-1] + 1) %>% as.matrix()
     colors <- colorRampPalette(c("red", "white", "black"))(15)
     
