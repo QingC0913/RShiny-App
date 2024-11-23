@@ -13,6 +13,7 @@ library(rlang) # make sure col names can be used in shiny
 library(bslib) # to validate csv files
 library(glue) # string concats
 library(fields) # heatmap legend
+# library(ggbeeswarm) # beeswarm plot
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -60,8 +61,10 @@ ui <- fluidPage(
                                plotOutput("counts_var_plot2")),
                       tabPanel("Heatmap", 
                                plotOutput("counts_heatmap")), 
-                      tabPanel("PCA")
-                    )
+                      tabPanel("PCA",
+                               uiOutput("counts_pca_layout")
+                               )
+                      )
                   )
                 )), 
        tabPanel("DE"), 
@@ -77,7 +80,7 @@ server <- function(input, output) {
     counts = read.csv(file$datapath) 
     genes <- counts$GeneID
     rownames(counts) <- genes
-    # counts <- counts[1:10, 1:11]
+    counts <- counts[1:10, 1:11]
     return(counts)
   })
   
@@ -100,6 +103,7 @@ server <- function(input, output) {
     )
   })
   
+  # reactive values to update counts filters
   counts_summ_reactives <- reactiveValues(var_perc = 100,    
                                           nonzeros = 0)
   observeEvent(input$counts_btn, {
@@ -162,12 +166,68 @@ server <- function(input, output) {
     colors <- colorRampPalette(c("red", "white", "black"))(15)
     
     heatmap(mat, col = colors)
-    image.plot(legend.only = TRUE, 
-               zlim = range(mat, na.rm = TRUE), 
+    image.plot(legend.only = T, 
+               zlim = range(mat, na.rm = T), 
                col = colors,
                legend.lab = "Normalized Counts")
   })
   
+  # todo remove 
+  output$counts_pca2 <- renderTable({
+    req(counts_data())
+    counts <- counts_data()[-1]
+    pca_results <- prcomp(t(counts), center = T, scale = F)
+    print(pca_results$x)
+    
+    return(pca_results$x)
+  })
+  
+  counts_pca_reactives <- reactiveValues(first = "PC1",
+                                          second = "PC2")
+  observeEvent(input$pca_btn, {
+    counts_pca_reactives$first <- input$counts_pca_select1
+    counts_pca_reactives$second <- input$counts_pca_select2
+  })
+  
+  output$counts_pca_layout <- renderUI({
+    req(counts_data())
+    pca_results <- get_pca_results(counts_data()[-1], x = T)
+    pcs <- colnames(pca_results)
+    sidebarLayout(
+      sidebarPanel(
+        selectInput("counts_pca_select1", 
+                    label = "first PC", 
+                    choices = pcs, 
+                    selected = "PC1", 
+                    multiple = F), 
+        selectInput("counts_pca_select2", 
+                    label = "second PC", 
+                    choices = pcs, 
+                    selected = "PC2", 
+                    multiple = F),
+         actionButton("pca_btn", 
+                      label = "Plot!")
+      ), 
+      mainPanel(
+        plotOutput("counts_pca")
+      ))
+  })
+  
+  output$counts_pca <- renderPlot({
+    req(counts_data())
+    pca_results <- get_pca_results(counts_data()[-1], x = T)
+    vars <- get_pca_results(counts_data()[-1], x = F)
+    first <- counts_pca_reactives$first 
+    second <- counts_pca_reactives$second
+    print(vars)
+    g <- ggplot(pca_results) +
+      geom_point(aes(x = !!sym(first), 
+                     y = !!sym(second))) + 
+      labs(x = glue("{first} ({round(vars[[first]], 2)}% variance explained)"), 
+           y = glue("{second} ({round(vars[[second]], 2)}% variance explained)"), 
+           title = glue("{first} vs. {second}"))
+    return(g)
+  })
   
   #####               SAMPLES TAB            #####
   # loads file data when submit button is pressed
@@ -293,11 +353,13 @@ server <- function(input, output) {
     g <- plot_samples_scatter(samples_data(), "cag", "age_of_death")
     return(g)
 })
+  
   output$samples_point2 <- renderPlot({
     req(samples_data())
     g <- plot_samples_scatter(samples_data(), "age_of_onset", "age_of_death")
     return(g)
 })
+  
   output$samples_point3 <- renderPlot({
     req(samples_data())
     g <- plot_samples_scatter(samples_data(), "h_v_striatal_score", 
@@ -310,3 +372,14 @@ server <- function(input, output) {
 
 # Run the application 
 shinyApp(ui = ui, server = server)
+
+#beeswarm 
+# pcas <- 9
+# pca_long <- pca_results$x[, 1:pcas] %>% 
+#   as.data.frame() %>% 
+#   pivot_longer(cols = paste0("PC", seq(1:pcas)), names_to = "PC", values_to = "vals") 
+# 
+# print(pca_long)
+# g <- pca_long %>% 
+#   ggplot + 
+#   geom_beeswarm(aes(x = !!sym("PC"), y = !!sym("vals")))

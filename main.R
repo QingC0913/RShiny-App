@@ -1,5 +1,18 @@
+get_pca_results <- function(counts, x = T) {
+  pca_results <- prcomp(t(counts), center = T, scale = F) 
+  pcs <- data.frame(pca_results$x)
+  print(pcs)
+  if (!x) {
+    vars <- pca_results$sdev ** 2 
+    perc_vars <- vars / sum(vars) * 100
+    names(perc_vars) <- colnames(pcs)
+    print(perc_vars)
+    return(perc_vars)
+  }
+  return(pcs)
+}
+
 plot_counts_scatter <- function(counts, val) {
-  print(counts)
   counts$keep <- factor(counts$keep, levels = c("TRUE", "FALSE"))
   g <- ggplot(counts) + 
     theme_linedraw() +
@@ -17,7 +30,6 @@ plot_counts_scatter <- function(counts, val) {
                             y = !!sym("num_zeros"), 
                             color = !!sym("keep")),
                         size = 3) +
-      # coord_cartesian(xlim = c(-15, 6.25), ) + 
       labs(x = "Log2(Median)", y = "Number of Zeros", title = "Median Count vs. Number of Zeros")
   }
   return(g)
