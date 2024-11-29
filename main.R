@@ -105,19 +105,6 @@ plot_samples_boxplot <- function(samples, selected_col) {
   return(g)
 }  
 
-process_samples_table <- function(data, sort_col, asc, row) {
-  if (is.null(sort_col)) {
-    sort_col <- colnames(data)[1]
-  }
-  if (asc == "Asc") {
-    data <- data %>% arrange(!!sym(sort_col)) 
-  }
-  else {
-    data <- data %>% arrange(desc(!!sym(sort_col))) 
-  }
-  return(head(data, row))
-} 
-
 process_samples_summary <- function(samples) {
   # calculate means and sds of numeric values
   means <- samples %>% summarise_if(is.numeric, mean, na.rm = TRUE) %>% round()
