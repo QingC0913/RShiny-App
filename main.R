@@ -1,3 +1,79 @@
+#####                 DE TAB              #####
+# plot_de_jitter(data) {
+#   top10 <- data %>% 
+#     arrange(desc(padj)) %>% 
+#     slice_head(n = 10)
+#   g <- ggplot(top10) + 
+#     geom_point(aes(x = "Gene", 
+#                    y = ""), 
+#                position = "jitter")
+#   return(g)
+# }
+
+plot_de_volcano <- function(data, padj_threshold = 0.10) {
+  data <- data %>% mutate(volc_plot_status = case_when(
+    padj < padj_threshold & log2FoldChange > 0 ~ "UP", 
+    padj < padj_threshold & log2FoldChange < 0 ~ "DOWN",
+    padj >= padj_threshold ~ "NS"))
+  
+  g <- ggplot(data = subset(data, !is.na(volc_plot_status))) +
+    geom_point(aes(x = log2FoldChange, 
+                   y = -log10(padj), 
+                   color = volc_plot_status)) +
+    theme_minimal() +
+    labs(x = "Log2(Fold Change)", 
+         y = "-Log10(padj)",
+      title = "Volano plot of DESeq2 differential expression results (control vs. Huntington's)") +
+    scale_color_manual(name = "Differential Expression Status",
+                       values = c("UP" = "pink", "DOWN" = "lightblue", "NS" = "lightgreen"), 
+                       labels = c("Upregulated", "Downregulated", "Not significant"))
+  return(g)
+}
+
+plot_de_log2fc <- function(data, padj_threshold = 0.10) {
+  g <- data %>%
+    filter(padj < padj_threshold) %>% 
+    ggplot() +
+    geom_histogram(aes(x = log2FoldChange), 
+                   fill = "purple2", 
+                   color = "black", 
+                   bins = 100) +
+    theme_minimal() + 
+    labs(x = "Log2(Fold Change)", 
+         y = "Count",
+      title = "Histogram of Log2FoldChange for DE Genes (control vs. Huntington's)") +
+    theme(plot.title = element_text(hjust=0.5))
+  return(g)
+}
+
+plot_de_pvals <- function(data) {
+  g <- data %>%
+    ggplot() +
+    geom_histogram(aes(x = pvalue), 
+                   color = "black", 
+                   fill = "skyblue") + #bins = 50
+    theme_minimal() + 
+    labs(x = "Log2(Fold Change)", 
+         y = "Count",
+         title = "Histogram of raw pvalues obtained from DE analysis (control vs. Huntington's)") +
+    theme(plot.title = element_text(hjust=0.5))
+  return(g)
+}
+
+#####                 COUNTS TAB              #####
+plot_counts_pca <- function(data, first, second) {
+  pca_results <- get_pca_results(data[-1], x = T)
+  vars <- get_pca_results(data[-1], x = F)
+  g <- ggplot(pca_results) +
+    geom_point(aes(x = !!sym(first),
+                   y = !!sym(second))) +
+    labs(x = glue("{first} ({round(vars[[first]], 2)}% variance explained)"),
+         y = glue("{second} ({round(vars[[second]], 2)}% variance explained)"),
+         title = glue("{first} vs. {second}")) +
+    theme_minimal()
+  return(g)
+}
+
 get_pca_results <- function(counts, x = T) {
   pca_results <- prcomp(t(counts), center = T, scale = F) 
   pcs <- data.frame(pca_results$x)
@@ -63,7 +139,8 @@ process_counts_summary <- function(counts, filtered) {
                     glue("{tot_genes -  filtered_genes} ({(tot_genes - filtered_genes) / tot_genes * 100}%)" ))
   return(results)
 }
-  
+
+#####                 SAMPLES TAB              #####
 plot_samples_scatter <- function(samples, xcol, ycol, colore = NULL) {
   g <- ggplot(samples) + theme_linedraw()
   if (!is.null(colore)) {

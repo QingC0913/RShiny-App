@@ -79,7 +79,12 @@ ui <- fluidPage(
                       tabPanel("Differential Expression Results",
                                dataTableOutput("de_table")
                                ),
-                      tabPanel("tab2")
+                      tabPanel("Visuals", 
+                               plotOutput("de_pval_hist"), 
+                               plotOutput("de_log2fc_hist"), 
+                               # plotOutput("de_jitter"),
+                               plotOutput("de_volcano")
+                               )
                     )
                   )
                 )),
@@ -98,12 +103,42 @@ server <- function(input, output, session) {
     return(de)
   })
   
-    output$de_table <- renderDataTable({
-      req(de_data())
-      return(de_data())},
-      options = list(scrollX = TRUE),
-      rownames = FALSE)
+  # outputs DE results data
+  output$de_table <- renderDataTable({
+    req(de_data())
+    return(de_data())},
+    options = list(scrollX = TRUE),
+    rownames = FALSE)
   
+  # outputs raw pvalues histogram
+  output$de_pval_hist <- renderPlot({
+    data <- de_data()
+    req(data)
+    g <- plot_de_pvals(data)
+    return(g)
+  })
+  
+  # outputs log2FC histogram, after filtering with padj threshold
+  output$de_log2fc_hist <- renderPlot({ #todo customizable padj threshold
+    req(de_data())
+    g <- plot_de_log2fc(de_data()) 
+    return(g)
+  })
+  
+  # outputs scatter plot of top 10 most DE genes by padj
+  # output$de_jitter <- renderPlot({
+  #   req(de_data())
+  #   g <- plot_de_jitter(de_data())
+  #   return(g)
+  # })
+  
+  # outputs DE volcano plot
+  output$de_volcano <- renderPlot({
+    req(de_data())
+    g <- plot_de_volcano(de_data()) 
+    return(g)
+  })
+    
   #####               COUNTS TAB            #####
   # get counts data from file
   counts_data <- eventReactive(input$counts_upload_btn, {
@@ -223,16 +258,9 @@ server <- function(input, output, session) {
   # outputs PCA plot
   output$counts_pca <- renderPlot({
     req(counts_data())
-    pca_results <- get_pca_results(counts_data()[-1], x = T)
-    vars <- get_pca_results(counts_data()[-1], x = F)
-    first <- counts_pca_reactives$first
-    second <- counts_pca_reactives$second
-    g <- ggplot(pca_results) +
-      geom_point(aes(x = !!sym(first),
-                     y = !!sym(second))) +
-      labs(x = glue("{first} ({round(vars[[first]], 2)}% variance explained)"),
-           y = glue("{second} ({round(vars[[second]], 2)}% variance explained)"),
-           title = glue("{first} vs. {second}"))
+    g <- plot_counts_pca(counts_data(), 
+                         counts_pca_reactives$first, 
+                         counts_pca_reactives$second)
     return(g)
   })
 
@@ -340,20 +368,20 @@ server <- function(input, output, session) {
     req(samples_data())
     g <- plot_samples_scatter(samples_data(), "cag", "age_of_death")
     return(g)
-})
-
-  output$samples_point2 <- renderPlot({
-    req(samples_data())
-    g <- plot_samples_scatter(samples_data(), "age_of_onset", "age_of_death")
-    return(g)
-})
-
-  output$samples_point3 <- renderPlot({
-    req(samples_data())
-    g <- plot_samples_scatter(samples_data(), "h_v_striatal_score",
-                              "h_v_cortical_score", "vonsattel_grade")
-    return(g)
-})
+  })
+  
+    output$samples_point2 <- renderPlot({
+      req(samples_data())
+      g <- plot_samples_scatter(samples_data(), "age_of_onset", "age_of_death")
+      return(g)
+  })
+  
+    output$samples_point3 <- renderPlot({
+      req(samples_data())
+      g <- plot_samples_scatter(samples_data(), "h_v_striatal_score",
+                                "h_v_cortical_score", "vonsattel_grade")
+      return(g)
+  })
 
 } # end server
 
