@@ -126,7 +126,7 @@ server <- function(input, output, session) {
   # todo remove: just to see table 
   output$network_data_table <- renderTable({ #todo remove
     req(network_data())
-    data <- subset_by_genes()
+    data <- subset_by_genes(network_data(), get_genes())
     return(data)
   })
   
@@ -158,19 +158,6 @@ server <- function(input, output, session) {
     return(genes)
   })
   
-  # subset counts matrix with input genes
-  subset_by_genes <- function() {
-    data <- network_data()
-    genes <- get_genes() 
-    if (length(genes) == 0) {
-      return(data[-1])
-    }
-    subset <- network_data() %>% 
-      filter(GeneID %in% genes)
-    rownames(subset) <- subset$GeneID
-    return(subset[-1])
-  }
-  
   # text output if any input genes are not found in expr matrix
   output$genes_not_found <- renderText({
     data <- network_data()
@@ -187,7 +174,7 @@ server <- function(input, output, session) {
   
   # outputs controls for network graph node selection
   output$corr_ui <- renderUI({
-    genes <- rownames(subset_by_genes())
+    genes <- rownames(subset_by_genes(network_data(), get_genes()))
     print(genes)
     sidebarLayout(
       mainPanel(
@@ -207,32 +194,15 @@ server <- function(input, output, session) {
       )
     )
   })
-  
-  # computes correlation matrix
-  correlation_mat <- function() { # should also filter by slider
-    subset <- subset_by_genes()
-    mat <- cor(t(subset), method = "pearson")
-    return(mat)
-  }
-  
+
   # todo remove, correlation table
   # output$corr_matrix <- renderTable({
   #   return(correlation_mat())
   # })
   
-  create_network_graph <- function(mat) {
-    g <- graph_from_adjacency_matrix(mat, 
-                                     weighted = T, 
-                                     mode = "undirected")
-    vertex_attr(g) <- list(color = rep("slategray1", gorder(g)), 
-                           name = colnames(mat))
-    # name = colnames(mat),
-    return(g)
-  }
-  
   # outputs correlation network graph
   output$network_graph <- renderPlot({
-    mat <- correlation_mat() 
+    mat <- correlation_mat(network_data(), get_genes())
     g <- create_network_graph(mat)
     plot(g, vertex.label = colnames(mat))
   })
@@ -242,7 +212,7 @@ server <- function(input, output, session) {
     # At vendor/cigraph/src/paths/bellman_ford.c:384 : 
     # Negative loop in graph while calculating distances with Bellman-Ford algorithm. 
     # Negative loop detected while calculating shortest paths
-    mat <- correlation_mat() 
+    mat <- correlation_mat(network_data(), get_genes()) 
     g <- create_network_graph(mat)
     print(g)
     a <- shortest_paths(g, 

@@ -1,3 +1,33 @@
+# computes correlation matrix
+correlation_mat <- function(data, genes) { # should also filter by slider
+  subset <- subset_by_genes(data, genes)
+  mat <- cor(t(subset), method = "pearson")
+  return(mat)
+}
+
+create_network_graph <- function(mat) {
+  g <- graph_from_adjacency_matrix(mat, 
+                                   weighted = T, 
+                                   mode = "undirected")
+  vertex_attr(g) <- list(color = rep("slategray1", gorder(g)), 
+                         name = colnames(mat))
+  return(g)
+}
+
+# subset counts matrix with input genes
+subset_by_genes <- function(data, genes) {
+  # data <- network_data()
+  # genes <- get_genes() 
+  if (length(genes) == 0) {
+    return(data[-1])
+  }
+  subset <- data %>% 
+    filter(GeneID %in% genes)
+  rownames(subset) <- subset$GeneID
+  return(subset[-1])
+}
+
+
 #####                 DE TAB              #####
 
 
