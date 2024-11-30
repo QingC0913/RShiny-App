@@ -1,9 +1,8 @@
-# computes correlation matrix
-correlation_mat <- function(data, genes) { # should also filter by slider
-  subset <- subset_by_genes(data, genes)
-  mat <- cor(t(subset), method = "pearson") %>% abs()
-  return(mat)
-}
+# correlation_mat <- function(data, genes) { # should also filter by slider
+#   subset <- subset_by_genes(data, genes)
+#   mat <- cor(t(subset), method = "pearson") %>% abs()
+#   return(mat)
+# }
 
 create_network_graph <- function(mat) {
   g <- graph_from_adjacency_matrix(mat, 
@@ -98,12 +97,10 @@ plot_counts_pca <- function(data, first, second) {
 get_pca_results <- function(counts, x = T) {
   pca_results <- prcomp(t(counts), center = T, scale = F) 
   pcs <- data.frame(pca_results$x)
-  print(pcs)
   if (!x) {
     vars <- pca_results$sdev ** 2 
     perc_vars <- vars / sum(vars) * 100
     names(perc_vars) <- colnames(pcs)
-    print(perc_vars)
     return(perc_vars)
   }
   return(pcs)

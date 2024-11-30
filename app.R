@@ -89,7 +89,7 @@ ui <- fluidPage(
                     )
                   )
                 )),
-       tabPanel("TODO", # todo later could join norm counts GeneID with symbol & ENS ids (and radio choose)
+       tabPanel("Network Analysis", # todo later could join norm counts GeneID with symbol & ENS ids (and radio choose)
         sidebarLayout(
           sidebarPanel(
               fileInput("network_file", 
@@ -119,7 +119,7 @@ server <- function(input, output, session) {
   network_data <- eventReactive(input$network_btn, {
     file = input$network_file
     netw <- read.csv(file$datapath)
-    netw <- head(netw)
+    netw <- head(netw, 15)
     return(netw)
   })
   
@@ -143,7 +143,7 @@ server <- function(input, output, session) {
     sliderInput("network_slider", 
                 label = "Minimum correlation value", 
                 value = 0.5, 
-                min = -1, 
+                min = 0, 
                 max = 1, 
                 step = 0.05))
   })
@@ -178,12 +178,9 @@ server <- function(input, output, session) {
     genes <- rownames(subset_by_genes(network_data(), get_genes()))
     sidebarLayout(
       mainPanel(
-        tableOutput("corr_matrix"),
+        # tableOutput("corr_matrix"),
         plotOutput("network_graph"), 
-        glue("Shortest path between {input$node1} and {input$node2}:"), 
-        "[start]",
-        textOutput("network_shortest", inline = T), 
-        "[end]"
+        verbatimTextOutput("network_shortest")
       ),
       sidebarPanel(
         selectInput("node1", 
@@ -193,32 +190,48 @@ server <- function(input, output, session) {
         selectInput("node2", 
                     label = "Node 2",
                     choices = genes, 
-                    selected = genes[2])
+                    selected = genes[2]), 
+        actionButton("sp_btn", 
+                     label = "Find shortest path")
       )
     )
   })
 
-  # todo remove, correlation table
-  output$corr_matrix <- renderTable({
-    return(correlation_mat(network_data(), get_genes()))
-  })
+    correlation_mat <- function() { # should also filter by slider
+    data <- network_data()
+    genes <- get_genes()
+    subset <- subset_by_genes(data, genes)
+    mat <- cor(t(subset), method = "pearson") %>% abs()
+    min_r <- input$network_slider %>% abs()
+    mat[mat < min_r] <- 0 # no edge if doesn't meet criteria
+    return(mat)
+  }
   
   # outputs correlation network graph
   output$network_graph <- renderPlot({
-    mat <- correlation_mat(network_data(), get_genes())
+    mat <- correlation_mat()
     g <- create_network_graph(mat)
     plot(simplify(g), vertex.label = colnames(mat))
     
   })
   
   output$network_shortest <- renderText({
-    mat <- correlation_mat(network_data(), get_genes()) 
+    return(find_shortest_path())
+  })
+  
+  find_shortest_path <- eventReactive(input$sp_btn, {
+    mat <- correlation_mat() 
     g <- create_network_graph(mat)
-    print(V(g))
     sp <- shortest_paths(g, 
-                   from = input$node1, 
-                   to = input$node2)
-    return(names(sp$vpath[[1]]))
+                         from = input$node1, 
+                         to = input$node2)
+    sp <- sp$vpath[[1]]
+    txt <- paste0("Shortest path between ", input$node1, " and ", input$node2,
+                  "\n[start] ", toString(names(sp)), " [end]")
+    if (length(sp) == 0) {
+      txt <- glue("There is no path from {input$node1} to {input$node2}.")
+    }
+    return(txt)
   })
   #####                 DE TAB              #####
   
