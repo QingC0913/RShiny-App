@@ -1,7 +1,7 @@
 # computes correlation matrix
 correlation_mat <- function(data, genes) { # should also filter by slider
   subset <- subset_by_genes(data, genes)
-  mat <- cor(t(subset), method = "pearson")
+  mat <- cor(t(subset), method = "pearson") %>% abs()
   return(mat)
 }
 

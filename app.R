@@ -169,18 +169,21 @@ server <- function(input, output, session) {
     if (length(not_found) == 0) {
       return("")
     }
-    return(paste0("The following genes were not found in the counts matrix: ", toString(not_found)))
+    return(paste0("The following genes were not found in the counts matrix: ", 
+                  toString(not_found)))
   })
   
   # outputs controls for network graph node selection
   output$corr_ui <- renderUI({
     genes <- rownames(subset_by_genes(network_data(), get_genes()))
-    print(genes)
     sidebarLayout(
       mainPanel(
         tableOutput("corr_matrix"),
         plotOutput("network_graph"), 
-        textOutput("network_shortest")
+        glue("Shortest path between {input$node1} and {input$node2}:"), 
+        "[start]",
+        textOutput("network_shortest", inline = T), 
+        "[end]"
       ),
       sidebarPanel(
         selectInput("node1", 
@@ -196,31 +199,26 @@ server <- function(input, output, session) {
   })
 
   # todo remove, correlation table
-  # output$corr_matrix <- renderTable({
-  #   return(correlation_mat())
-  # })
+  output$corr_matrix <- renderTable({
+    return(correlation_mat(network_data(), get_genes()))
+  })
   
   # outputs correlation network graph
   output$network_graph <- renderPlot({
     mat <- correlation_mat(network_data(), get_genes())
     g <- create_network_graph(mat)
-    plot(g, vertex.label = colnames(mat))
+    plot(simplify(g), vertex.label = colnames(mat))
+    
   })
   
   output$network_shortest <- renderText({
-    # Warning: Error in shortest_paths: 
-    # At vendor/cigraph/src/paths/bellman_ford.c:384 : 
-    # Negative loop in graph while calculating distances with Bellman-Ford algorithm. 
-    # Negative loop detected while calculating shortest paths
     mat <- correlation_mat(network_data(), get_genes()) 
     g <- create_network_graph(mat)
-    print(g)
-    a <- shortest_paths(g, 
+    print(V(g))
+    sp <- shortest_paths(g, 
                    from = input$node1, 
-                   to = input$node2)$vpath
-    print(a)
-    a
-    
+                   to = input$node2)
+    return(names(sp$vpath[[1]]))
   })
   #####                 DE TAB              #####
   
