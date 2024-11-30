@@ -1,14 +1,5 @@
 #####                 DE TAB              #####
-# plot_de_jitter(data) {
-#   top10 <- data %>% 
-#     arrange(desc(padj)) %>% 
-#     slice_head(n = 10)
-#   g <- ggplot(top10) + 
-#     geom_point(aes(x = "Gene", 
-#                    y = ""), 
-#                position = "jitter")
-#   return(g)
-# }
+
 
 plot_de_volcano <- function(data, padj_threshold = 0.10) {
   data <- data %>% mutate(volc_plot_status = case_when(

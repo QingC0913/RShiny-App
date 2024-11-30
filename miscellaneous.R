@@ -1,5 +1,6 @@
 ########################### was in UI DE TAB ########################### 
 uiOutput("de_tab")
+# plotOutput("de_jitter"),
 
 ########################### was in server DE TAB ########################### 
 # renders DE table sorting parameters once data loads
@@ -50,6 +51,13 @@ output$de_table <- renderTable({
                                  de_table_reactives$row)
   return(table)
 })
+
+# outputs scatter plot of top 10 most DE genes by padj
+# output$de_jitter <- renderPlot({
+#   req(de_data())
+#   g <- plot_de_jitter(de_data())
+#   return(g)
+# })
 
 ########################### was in UI DE TAB ########################### 
 uiOutput("samples_table_layout")
@@ -109,6 +117,19 @@ output$samples_table <- renderTable({
 })
 
 ########################### was in MAIN ########################### 
+# plot_de_jitter(data) {
+#   top10 <- data %>% 
+#     arrange(desc(padj)) %>% 
+#     slice_head(n = 10)
+#   g <- ggplot(top10) + 
+#     geom_point(aes(x = "Gene", 
+#                    y = ""), 
+#                position = "jitter")
+#   return(g)
+# }
+
+
+
 process_table_sorting <- function(data, sort_col, asc, row) {
   if (is.null(sort_col)) {
     sort_col <- colnames(data)[1]

@@ -13,6 +13,8 @@ library(rlang) # make sure col names can be used in shiny
 library(glue) # string concats
 library(fields) # heatmap legend
 library(DT) # datatable
+# library(fgsea) # gene set enrichment analysis 
+library(igraph)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -82,22 +84,116 @@ ui <- fluidPage(
                       tabPanel("Visuals", 
                                plotOutput("de_pval_hist"), 
                                plotOutput("de_log2fc_hist"), 
-                               # plotOutput("de_jitter"),
                                plotOutput("de_volcano")
                                )
                     )
                   )
                 )),
-       tabPanel("TODO")
+       tabPanel("TODO", # todo later could join norm counts GeneID with symbol & ENS ids (and radio choose)
+        sidebarLayout(
+          sidebarPanel(
+              fileInput("network_file", 
+                        label = "Please upload a normalized counts file."),
+              actionButton("network_btn", 
+                           label = "Upload"), 
+              uiOutput("network_ctrls")
+            ), 
+          mainPanel(
+                tabsetPanel(
+                  tabPanel("tab1", 
+                           textOutput("genes_not_found"),
+                           tableOutput("network_data_table")), 
+                  tabPanel("Correlation", 
+                           tableOutput("corr_matrix")), 
+                  tabPanel("tab3"))
+                )
+          )
+        )
       )
 )
 
 server <- function(input, output, session) {
+  #####     NETWORK #####
+  network_data <- eventReactive(input$network_btn, {
+    file = input$network_file
+    netw <- read.csv(file$datapath)
+    netw <- head(netw)
+    return(netw)
+  })
+  
+  output$network_data_table <- renderTable({ #todo remove
+    req(network_data())
+    data <- subset_by_genes()
+    return(data)
+  })
+  
+  output$network_ctrls <- renderUI({
+    req(network_data())
+    tagList(
+    textAreaInput("network_genes", 
+                  label = "Please enter a set of genes, one gene per line", 
+                  # value = "hi", 
+                  placeholder = "placeholder"), 
+    actionButton("network_genes_btn", 
+                 label = "Select genes"),
+    sliderInput("network_slider", 
+                label = "Minimum correlation value", 
+                value = 0.5, 
+                min = -1, 
+                max = 1, 
+                step = 0.05))
+  })
+  
+  get_genes <- eventReactive(input$network_genes_btn, {
+    genes <- input$network_genes %>% 
+      strsplit(split = "\n", fixed = T)
+    genes <- genes[[1]] %>% 
+                  lapply(str_trim) %>%
+                  unlist()
+    print(genes)
+    return(genes)
+  })
+  
+  subset_by_genes <- function() {
+    data <- network_data()
+    genes <- get_genes() 
+    if (length(genes) == 0) {
+      rownames(data) <- data$GeneID # todo: this shouldn't matter?
+      return(data[-1])
+    }
+    subset <- network_data() %>% 
+      filter(GeneID %in% genes)
+    rownames(subset) <- subset$GeneID
+    return(subset[-1])
+  }
+  
+  output$genes_not_found <- renderText({
+    data <- network_data()
+    genes <- get_genes()
+    if (length(genes) == 0) {
+      print("no geneeeessds")
+      return("")
+    }
+    not_found <- genes[! genes %in% data$GeneID]
+    if (length(not_found) == 0) {
+      return("")
+    }
+    print(not_found)
+    return(paste0("The following genes were not found in the counts matrix: ", toString(not_found)))
+  })
+  
+  output$corr_matrix <- renderTable({
+    subset <- subset_by_genes()
+    mat <- cor(t(subset), method = "pearson") %>% data.frame() %>% rownames_to_column(var = "d")
+    print(mat)
+    return(mat)
+
+  })
   #####                 DE TAB              #####
   
   # gets DE data from file
   de_data <- eventReactive(input$de_btn, {
-    file = input$de_file
+    file <- input$de_file
     de = read.csv(file$datapath)
     colnames(de) <- c("Gene", colnames(de)[2:ncol(de)])
     return(de)
@@ -124,13 +220,6 @@ server <- function(input, output, session) {
     g <- plot_de_log2fc(de_data()) 
     return(g)
   })
-  
-  # outputs scatter plot of top 10 most DE genes by padj
-  # output$de_jitter <- renderPlot({
-  #   req(de_data())
-  #   g <- plot_de_jitter(de_data())
-  #   return(g)
-  # })
   
   # outputs DE volcano plot
   output$de_volcano <- renderPlot({
