@@ -1,7 +1,5 @@
 #####                 NETWORK TAB              #####
 create_network_graph <- function(mat) {
-  print("in: create_network_graph")
-  print(mat)
   g <- graph_from_adjacency_matrix(mat, 
                                    weighted = T, 
                                    mode = "undirected")
@@ -37,10 +35,11 @@ plot_de_volcano <- function(data, padj_threshold = 0.10) {
     theme_minimal() +
     labs(x = "Log2(Fold Change)", 
          y = "-Log10(padj)",
-      title = "Volano plot of DESeq2 differential expression results (control vs. Huntington's)") +
+        title = "Volano plot of DESeq2 differential expression results (control vs. Huntington's)") +
     scale_color_manual(name = "Differential Expression Status",
                        values = c("UP" = "pink", "DOWN" = "lightblue", "NS" = "lightgreen"), 
-                       labels = c("Upregulated", "Downregulated", "Not significant"))
+                       labels = c("Upregulated", "Downregulated", "Not significant")) +
+    theme(legend.position = "bottom")
   return(g)
 }
 
@@ -66,7 +65,7 @@ plot_de_pvals <- function(data) {
     geom_histogram(aes(x = pvalue), 
                    color = "black", 
                    fill = "skyblue", 
-                   bins = 50)
+                   bins = 50) +
     theme_minimal() + 
     labs(x = "Log2(Fold Change)", 
          y = "Count",
@@ -85,7 +84,7 @@ plot_counts_pca <- function(data, first, second) {
     labs(x = glue("{first} ({round(vars[[first]], 2)}% variance explained)"),
          y = glue("{second} ({round(vars[[second]], 2)}% variance explained)"),
          title = glue("{first} vs. {second}")) +
-    theme_minimal()
+    theme_classic()
   return(g)
 }
 
@@ -104,10 +103,10 @@ get_pca_results <- function(counts, x = T) {
 plot_counts_scatter <- function(counts, val) {
   counts$keep <- factor(counts$keep, levels = c("TRUE", "FALSE"))
   g <- ggplot(counts) + 
-    theme_linedraw() +
+    theme_classic() +
     scale_color_manual(name = "Gene Passes Filters", 
                        values = c("TRUE" = "forestgreen", "FALSE" = "skyblue"),
-                       labels = c("TRUE" = "True", "FALSE" = "False")) 
+                       labels = c("TRUE" = "True", "FALSE" = "False"))
   if (val == 1) {
     g <- g + geom_point(aes(x = log2(!!sym("medians") + 1), 
                             y = log10(!!sym("variance") + 1), 
@@ -121,6 +120,7 @@ plot_counts_scatter <- function(counts, val) {
                         size = 3) +
       labs(x = "Log2(Median)", y = "Number of Zeros", title = "Median Count vs. Number of Zeros")
   }
+  g <- g  + theme(legend.position = "bottom")
   return(g)
 }
 
@@ -154,8 +154,8 @@ process_counts_summary <- function(counts, filtered) {
 }
 
 #####                 SAMPLES TAB              #####
-plot_samples_scatter <- function(samples, xcol, ycol, colore = NULL) {
-  g <- ggplot(samples) + theme_linedraw()
+plot_samples_scatter <- function(samples, xcol, ycol, xax, yax, title, colore = NULL) {
+  g <- ggplot(samples) + theme_classic()
   if (!is.null(colore)) {
     sbst <- samples %>%
     filter(!is.na(!!sym(colore)))
@@ -164,12 +164,13 @@ plot_samples_scatter <- function(samples, xcol, ycol, colore = NULL) {
                             color = as_factor(!!sym(colore))), 
                             size = 3) +
       scale_color_manual(values = c("#8402ab","darkturquoise"), 
-                         name = colore) +
-      theme(legend.position = "bottom")
-} else {
+                         name = str_to_title(gsub("_", " ", colore))) +
+      theme(legend.position = "bottom") + 
+      labs(x = xax, y = yax, title = title)
+  } else {
     g <- g + geom_point(aes(x = !!sym(xcol), y = !!sym(ycol)), 
-                        color = "darkturquoise",  size = 3)
-
+                        color = "darkturquoise",  size = 3) + 
+      labs(x = xax, y = yax, title = title)
   }
   return(g)
 }
@@ -190,7 +191,9 @@ plot_samples_boxplot <- function(samples, selected_col) {
         geom_jitter(color= "black", size = 0.8)
   }
   g <- g + guides(fill = "none") + 
-    theme_linedraw()
+    theme_classic() + 
+    labs(x = "Diagnosis", y = str_to_title(gsub("_", " ", selected_col)), 
+         title = glue("{str_to_title(gsub('_', ' ', selected_col))} in Patient Samples"))
 
   return(g)
 }  
