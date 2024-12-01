@@ -1,7 +1,5 @@
 #####                 NETWORK TAB              #####
 create_network_graph <- function(mat) {
-  print("in: create_network_graph")
-  print(mat)
   g <- graph_from_adjacency_matrix(mat, 
                                    weighted = T, 
                                    mode = "undirected")

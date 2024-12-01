@@ -19,88 +19,82 @@ library(pheatmap) # heatmap
 # Define UI for application that draws a histogram
 ui <- fluidPage(
      tabsetPanel(
-       tabPanel("Samples",
+       tabPanel("Sample Information Exploration",
                 sidebarLayout(
                   sidebarPanel(
                     fileInput("samples_file",
-                              "Please upload a RNA sequencing data file.",
+                              "Please upload a sample information file.",
                               multiple = F,
                               accept = ".csv"),
-                    actionButton("samples_upload_btn", "Upload")
-                    ),
+                    actionButton(inputId = "samples_upload_btn", 
+                                 label = span("Upload File", 
+                                 icon("open-file", lib = "glyphicon")))),
                   mainPanel(
                     tabsetPanel(
-                      tabPanel("Summary",
+                      tabPanel("Sample Summary",
                                textOutput("samples_summary"),
                                tableOutput("samples_table_summary")),
-                      tabPanel("Table",
+                      tabPanel("Data Table",
                                dataTableOutput("samples_table_layout")
                                ),
-                      tabPanel("Plots",
-                               uiOutput("samples_plots_layout"))
-                    )
-                  )
-                )
-              ),
-       tabPanel("Counts",
+                      tabPanel("Sample Exploration Plots",
+                               uiOutput("samples_plots_layout")))))),
+       tabPanel("Counts Matrix Exploration",
                 sidebarLayout(
                   sidebarPanel(
                     fileInput("counts_file",
-                              label = "Please upload a counts matrix file.",
+                              label = "Please upload a normalized RNA-seq counts file.",
                               multiple = F,
                               accept = ".csv"),
-                    actionButton("counts_upload_btn", "Upload"),
-                    uiOutput("counts_param")
-                  ),
+                    actionButton("counts_upload_btn", 
+                                 label = span("Upload File", 
+                                 icon("open-file", lib = "glyphicon"))),
+                    uiOutput("counts_param")),
                   mainPanel(
                     tabsetPanel(
-                      tabPanel("Summary",
+                      tabPanel("Data Summary",
                                tableOutput("counts_summary")),
                       tabPanel("Diagnostic Plots",
                                plotOutput("counts_var_plot1"),
                                plotOutput("counts_var_plot2")),
-                      tabPanel("Heatmap",
+                      tabPanel("Counts Heatmap",
                                plotOutput("counts_heatmap")),
-                      tabPanel("PCA",
+                      tabPanel("Principal Component Analysis",
                                uiOutput("counts_pca_layout")
-                               )
-                      )
-                  )
-                )),
-       tabPanel("DE",
+                               ))))),
+       tabPanel("Differential Expression Analysis",
                 sidebarLayout(
                   sidebarPanel(
                     fileInput("de_file",
                               label = "Please upload a differential expression results file.",
                               accept = ".csv",
                               multiple = F),
-                    actionButton("de_btn", "Upload")
-                  ),
+                    actionButton("de_btn",
+                                 label = span("Upload File", 
+                                 icon("open-file", lib = "glyphicon")))),
                   mainPanel(
                     tabsetPanel(
                       tabPanel("Differential Expression Results",
                                dataTableOutput("de_table")
                                ),
-                      tabPanel("Visuals", 
+                      tabPanel("Visualizations", 
                                plotOutput("de_pval_hist"), 
                                plotOutput("de_log2fc_hist"), 
-                               plotOutput("de_volcano")
-                               )
-                    )
-                  )
-                )),
-       tabPanel("Network Analysis", # todo later could join norm counts GeneID with symbol & ENS ids (and radio choose)
+                               plotOutput("de_volcano")))))),
+       tabPanel("Correlation Network Analysis", # todo later could join norm counts GeneID with symbol & ENS ids (and radio choose)
         sidebarLayout(
           sidebarPanel(
               fileInput("network_file", 
-                        label = "Please upload a normalized counts file."),
+                        label = "Please upload a normalized RNA-seq counts file.", 
+                        multiple = F, 
+                        accept = ".csv"),
               actionButton("network_btn", 
-                           label = "Upload"), 
-              uiOutput("network_ctrls")
-            ), 
+                           label = span("Upload File", 
+                           icon("open-file", lib = "glyphicon"))), 
+              uiOutput("network_ctrls")), 
           mainPanel(
                 tabsetPanel(
-                  tabPanel("Correlation Heatmap", 
+                  tabPanel("Selected Genes Heatmaps", 
                            verbatimTextOutput("genes_not_found"),
                            plotOutput("network_cor_heatmap"),
                            plotOutput("network_heatmap")
@@ -108,12 +102,7 @@ ui <- fluidPage(
                   tabPanel("Correlation Network", 
                            uiOutput("corr_ui")),
                   tabPanel("Network Metrics", 
-                           dataTableOutput("network_metrics")))
-                )
-          )
-        )
-      )
-)
+                           dataTableOutput("network_metrics"))))))))
 
 server <- function(input, output, session) {
   #####               NETWORK TAB            #####
@@ -135,7 +124,6 @@ server <- function(input, output, session) {
   
   output$network_heatmap <- renderPlot({
     sbst <- subset_by_genes(network_data(), get_genes())
-    print(sbst)
     h <- pheatmap(log2(sbst + 1), main = "Heatmap of Expression of Selected Genes (log2-Transformed)")
     return(h)
   })  
@@ -148,7 +136,8 @@ server <- function(input, output, session) {
                   label = "Please enter a set of genes, one gene per line",
                   placeholder = "all genes"), 
     actionButton("network_genes_btn", 
-                 label = "Select genes"),
+                 label = span("Upload Gene List", 
+                 icon("upload", lib = "glyphicon"))),
     sliderInput("network_slider", 
                 label = "Minimum correlation value", 
                 value = 0.5, 
@@ -192,17 +181,16 @@ server <- function(input, output, session) {
       ),
       sidebarPanel(
         selectInput("node1", 
-                    label = "Node 1", 
+                    label = "Gene 1", 
                     choices = genes, 
                     selected = genes[1]), 
         selectInput("node2", 
-                    label = "Node 2",
+                    label = "Gene 2",
                     choices = genes, 
                     selected = genes[2]), 
         actionButton("sp_btn", 
-                     label = "Find shortest path")
-      )
-    )
+                     label = span("Find Shortest Path",
+                     icon("search", lib = "glyphicon")))))
   })
 
   correlation_mat <- function(rplc = T) { # should also filter by slider
@@ -252,13 +240,11 @@ server <- function(input, output, session) {
   
   output$network_metrics <- renderDataTable({
     mat <- correlation_mat() 
-    print(mat)
     g <- create_network_graph(mat)
     
     degs <- degree(g)
     close_centrality <- closeness(g)
     btw_centrality <- betweenness(g)
-    print(names(V(g)))
     df <- data.frame(Gene = colnames(mat), 
                         Degree = as.integer(degs), 
                         Closeness = round(close_centrality, 3), 
@@ -331,10 +317,11 @@ server <- function(input, output, session) {
                   value = 0,
                   max = ncol(counts_data()) - 1, # first col is GeneID
                   step = 1),
-      actionButton("counts_btn", "Submit")
-    )
+      actionButton("counts_btn", 
+                   label = span("Set Filters", 
+                   icon("filter", lib = "glyphicon"))))
   })
-
+  
   # reactive values to update counts filters
   counts_summ_reactives <- reactiveValues(var_perc = 100,
                                           nonzeros = 0)
@@ -413,11 +400,10 @@ server <- function(input, output, session) {
                     selected = "PC2",
                     multiple = F),
          actionButton("pca_btn",
-                      label = "Plot!")
-      ),
+                      label = span("Plot PCA", 
+                      icon("pencil", lib = "glyphicon")))),
       mainPanel(
-        plotOutput("counts_pca")
-      ))
+        plotOutput("counts_pca")))
   })
 
   # outputs PCA plot
@@ -512,13 +498,13 @@ server <- function(input, output, session) {
                 plotOutput("samples_point3")),
       sidebarPanel(
         selectInput("samples_box_radio",
-                     label = "Choose a column visualize with boxplot!",
+                     label = "Choose a column",
                      choices = col_names,
                      selected = "age_of_death"),
         actionButton("samples_boxplot_btn",
-                     label = "Plot boxplot!")
-    )
-)})
+                     label = span("Plot Boxplot", 
+                     icon("pencil", lib = "glyphicon")))))
+  })
 
   # outputs samples boxplot
   output$samples_boxplot <- renderPlot({
