@@ -1,3 +1,5 @@
+theme_update(plot.title = element_text(hjust = 0.5))
+
 #####                 NETWORK TAB              #####
 create_network_graph <- function(mat) {
   g <- graph_from_adjacency_matrix(mat, 
@@ -120,7 +122,7 @@ plot_counts_scatter <- function(counts, val) {
                         size = 3) +
       labs(x = "Log2(Median)", y = "Number of Zeros", title = "Median Count vs. Number of Zeros")
   }
-  g <- g  + theme(legend.position = "bottom")
+  g <- g + theme(legend.position = "bottom")
   return(g)
 }
 
