@@ -11,10 +11,10 @@ library(shiny)
 library(tidyverse)
 library(rlang) # make sure col names can be used in shiny
 library(glue) # string concats
-library(fields) # heatmap legend
+# library(fields) # heatmap legend
 library(DT) # datatable
-# library(fgsea) # gene set enrichment analysis 
-library(igraph)
+library(igraph) # network analysis 
+library(pheatmap) # heatmap
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
@@ -100,12 +100,15 @@ ui <- fluidPage(
             ), 
           mainPanel(
                 tabsetPanel(
-                  tabPanel("tab1", 
-                           textOutput("genes_not_found"),
-                           tableOutput("network_data_table")), 
-                  tabPanel("Correlation", 
+                  tabPanel("Correlation Heatmap", 
+                           verbatimTextOutput("genes_not_found"),
+                           plotOutput("network_cor_heatmap"),
+                           plotOutput("network_heatmap")
+                           ), 
+                  tabPanel("Correlation Network", 
                            uiOutput("corr_ui")),
-                  tabPanel("tab3"))
+                  tabPanel("Network Metrics", 
+                           dataTableOutput("network_metrics")))
                 )
           )
         )
@@ -119,25 +122,31 @@ server <- function(input, output, session) {
   network_data <- eventReactive(input$network_btn, {
     file = input$network_file
     netw <- read.csv(file$datapath)
-    netw <- head(netw, 15)
+    netw <- head(netw)
     return(netw)
   })
   
-  # todo remove: just to see table 
-  output$network_data_table <- renderTable({ #todo remove
-    req(network_data())
-    data <- subset_by_genes(network_data(), get_genes())
-    return(data)
+  # outputs correlation heatmap
+  output$network_cor_heatmap <- renderPlot({
+    mat <- correlation_mat(rplc = F)
+    h <- pheatmap(mat, main = "Heatmap of Pairwise Gene Expression Correlation")
+    return(h)
   })
+  
+  output$network_heatmap <- renderPlot({
+    sbst <- subset_by_genes(network_data(), get_genes())
+    print(sbst)
+    h <- pheatmap(log2(sbst + 1), main = "Heatmap of Expression of Selected Genes (log2-Transformed)")
+    return(h)
+  })  
   
   # correlation parameters for network graph
   output$network_ctrls <- renderUI({
     req(network_data())
     tagList(
     textAreaInput("network_genes", 
-                  label = "Please enter a set of genes, one gene per line", 
-                  # value = "hi", 
-                  placeholder = "placeholder"), 
+                  label = "Please enter a set of genes, one gene per line",
+                  placeholder = "all genes"), 
     actionButton("network_genes_btn", 
                  label = "Select genes"),
     sliderInput("network_slider", 
@@ -178,7 +187,6 @@ server <- function(input, output, session) {
     genes <- rownames(subset_by_genes(network_data(), get_genes()))
     sidebarLayout(
       mainPanel(
-        # tableOutput("corr_matrix"),
         plotOutput("network_graph"), 
         verbatimTextOutput("network_shortest")
       ),
@@ -197,13 +205,18 @@ server <- function(input, output, session) {
     )
   })
 
-    correlation_mat <- function() { # should also filter by slider
+  correlation_mat <- function(rplc = T) { # should also filter by slider
     data <- network_data()
     genes <- get_genes()
-    subset <- subset_by_genes(data, genes)
-    mat <- cor(t(subset), method = "pearson") %>% abs()
-    min_r <- input$network_slider %>% abs()
-    mat[mat < min_r] <- 0 # no edge if doesn't meet criteria
+    sbst <- subset_by_genes(data, genes)
+    if (!rplc) {
+      mat <- cor(t(sbst), method = "pearson")
+    } else {
+      # positive values-only correlation matrix, for finding shortest path
+      mat <- cor(t(sbst), method = "pearson") %>% abs()
+      min_r <- input$network_slider %>% abs()
+      mat[mat < min_r] <- 0 # no edge if doesn't meet criteria
+    }
     return(mat)
   }
   
@@ -215,24 +228,44 @@ server <- function(input, output, session) {
     
   })
   
+  # outputs shortest path between two chosen nodes
   output$network_shortest <- renderText({
     return(find_shortest_path())
   })
   
+  # finds shortest path once button is clicked
   find_shortest_path <- eventReactive(input$sp_btn, {
     mat <- correlation_mat() 
     g <- create_network_graph(mat)
-    sp <- shortest_paths(g, 
-                         from = input$node1, 
+    sp <- shortest_paths(g, from = input$node1, 
                          to = input$node2)
     sp <- sp$vpath[[1]]
-    txt <- paste0("Shortest path between ", input$node1, " and ", input$node2,
-                  "\n[start] ", toString(names(sp)), " [end]")
+    
     if (length(sp) == 0) {
       txt <- glue("There is no path from {input$node1} to {input$node2}.")
+    } else {
+      txt <- paste0("Shortest path between ", input$node1, " and ", input$node2,
+                    "\n[start] ", toString(names(sp)), " [end]")
     }
     return(txt)
   })
+  
+  output$network_metrics <- renderDataTable({
+    mat <- correlation_mat() 
+    print(mat)
+    g <- create_network_graph(mat)
+    
+    degs <- degree(g)
+    close_centrality <- closeness(g)
+    btw_centrality <- betweenness(g)
+    print(names(V(g)))
+    df <- data.frame(Gene = colnames(mat), 
+                        Degree = as.integer(degs), 
+                        Closeness = round(close_centrality, 3), 
+                        Betweenness = as.integer(btw_centrality))
+    return(df)
+    
+  }, rownames = F)
   #####                 DE TAB              #####
   
   # gets DE data from file
@@ -278,9 +311,8 @@ server <- function(input, output, session) {
     file = input$counts_file
     counts = read.csv(file$datapath)
     genes <- counts$GeneID
-    # genes <- counts[[1]]
     rownames(counts) <- genes
-    counts <- counts[1:10, 1:11]
+    # counts <- counts[1:10, 1:11]
     return(counts)
   })
 
@@ -290,7 +322,7 @@ server <- function(input, output, session) {
     tagList(
       sliderInput("counts_var_slider",
                   label = "min percentile of variance",
-                  min = 0,
+                  min = 1,
                   value = 100,
                   max = 100),
       sliderInput("counts_nonzero_slider",
@@ -403,13 +435,12 @@ server <- function(input, output, session) {
     filtered <- process_counts_filters(counts_data(), counts_summ_reactives$nonzeros,
                                        counts_summ_reactives$var_perc, 0)
     mat <- log2(filtered[-1] + 1) %>% as.matrix()
-    colors <- colorRampPalette(c("red", "white", "black"))(15)
-
-    heatmap(mat, col = colors)
-    image.plot(legend.only = T,
-               zlim = range(mat, na.rm = T),
-               col = colors,
-               legend.lab = "Normalized Counts")
+    pheatmap(mat,
+             clustering_distance_rows = "euclidean", # Clustering metric for rows
+             clustering_distance_cols = "euclidean", # Clustering metric for columns
+             clustering_method = "complete",    # Hierarchical clustering method
+             show_rownames = F, 
+             main = "Heatmap of Normalized RNA-seq Counts")
   })
 
   #####               SAMPLES TAB            #####

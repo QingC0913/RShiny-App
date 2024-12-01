@@ -1,10 +1,7 @@
-# correlation_mat <- function(data, genes) { # should also filter by slider
-#   subset <- subset_by_genes(data, genes)
-#   mat <- cor(t(subset), method = "pearson") %>% abs()
-#   return(mat)
-# }
-
+#####                 NETWORK TAB              #####
 create_network_graph <- function(mat) {
+  print("in: create_network_graph")
+  print(mat)
   g <- graph_from_adjacency_matrix(mat, 
                                    weighted = T, 
                                    mode = "undirected")
@@ -15,21 +12,18 @@ create_network_graph <- function(mat) {
 
 # subset counts matrix with input genes
 subset_by_genes <- function(data, genes) {
-  # data <- network_data()
-  # genes <- get_genes() 
+  rownames(data) <- data$GeneID
   if (length(genes) == 0) {
     return(data[-1])
   }
-  subset <- data %>% 
+  sbst <- data %>% 
     filter(GeneID %in% genes)
-  rownames(subset) <- subset$GeneID
-  return(subset[-1])
+  rownames(sbst) <- sbst$GeneID
+  return(sbst[-1])
 }
 
 
 #####                 DE TAB              #####
-
-
 plot_de_volcano <- function(data, padj_threshold = 0.10) {
   data <- data %>% mutate(volc_plot_status = case_when(
     padj < padj_threshold & log2FoldChange > 0 ~ "UP", 
@@ -71,7 +65,8 @@ plot_de_pvals <- function(data) {
     ggplot() +
     geom_histogram(aes(x = pvalue), 
                    color = "black", 
-                   fill = "skyblue") + #bins = 50
+                   fill = "skyblue", 
+                   bins = 50)
     theme_minimal() + 
     labs(x = "Log2(Fold Change)", 
          y = "Count",
