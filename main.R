@@ -1,5 +1,3 @@
-theme_update(plot.title = element_text(hjust = 0.5))
-
 #####                 NETWORK TAB              #####
 create_network_graph <- function(mat) {
   g <- graph_from_adjacency_matrix(mat, 
@@ -166,7 +164,7 @@ plot_samples_scatter <- function(samples, xcol, ycol, xax, yax, title, colore = 
                             color = as_factor(!!sym(colore))), 
                             size = 3) +
       scale_color_manual(values = c("#8402ab","darkturquoise"), 
-                         name = str_to_title(gsub("_", " ", colore))) +
+                         name = fix_name(colore)) +
       theme(legend.position = "bottom") + 
       labs(x = xax, y = yax, title = title)
   } else {
@@ -194,8 +192,8 @@ plot_samples_boxplot <- function(samples, selected_col) {
   }
   g <- g + guides(fill = "none") + 
     theme_classic() + 
-    labs(x = "Diagnosis", y = str_to_title(gsub("_", " ", selected_col)), 
-         title = glue("{str_to_title(gsub('_', ' ', selected_col))} in Patient Samples"))
+    labs(x = "Diagnosis", y = fix_name(selected_col), 
+         title = glue("{fix_name(selected_col)} in Patient Samples"))
 
   return(g)
 }  
@@ -208,8 +206,8 @@ process_samples_summary <- function(samples) {
     t() %>% 
     as.data.frame() %>% 
     rownames_to_column(var = "Column") %>% 
-    mutate(Val = paste0(V1, " (+/- ", V2, ")")) %>%
-    select(c(Column, Val))
+    mutate(Values = paste0(V1, " (+/- ", V2, ")")) %>%
+    select(c(Column, Values))
   
   # combine values into summary table
   summary_table <- as.data.frame(colnames(samples))
@@ -217,7 +215,19 @@ process_samples_summary <- function(samples) {
   summary_table <- summary_table %>% 
     mutate("Type" = sapply(samples, FUN = class)) %>% 
     left_join(vals, join_by(Column))
-  summary_table$Val[1] <- paste(levels(samples$tissue), collapse = ", ")
-  summary_table$Val[2] <- paste(levels(samples$diagnosis), collapse = ", ")
+  summary_table$Values[1] <- paste(levels(samples$tissue), collapse = ", ")
+  summary_table$Values[2] <- paste(levels(samples$diagnosis), collapse = ", ")
+  summary_table$Column <- fix_name(summary_table$Column, single = F)
   return(summary_table)
+}
+
+fix_name <- function(n, single = T) {
+  if (single) {
+    x <- str_to_title(gsub("_", " ", n))
+  } else {
+    x <- lapply(n, FUN = function(y) {
+      fix_name(y)
+    })
+  }
+  return(x)
 }

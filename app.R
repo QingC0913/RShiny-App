@@ -142,18 +142,21 @@ server <- function(input, output, session) {
   output$network_ctrls <- renderUI({
     req(network_data())
     tagList(
-    textAreaInput("network_genes", 
-                  label = "Please enter a list of genes, one gene per line",
-                  placeholder = "all genes"), 
-    actionButton("network_genes_btn", 
-                 label = span("Upload Gene List", 
-                 icon("upload", lib = "glyphicon"))),
-    sliderInput("network_slider", 
-                label = "Minimum correlation value", 
-                value = 0.5, 
-                min = 0, 
-                max = 1, 
-                step = 0.05))
+      br(), 
+      textAreaInput("network_genes", 
+                    label = "Please enter a list of genes, one gene per line:",
+                    placeholder = "all genes"), 
+      actionButton("network_genes_btn", 
+                   label = span("Upload Gene List", 
+                   icon("upload", lib = "glyphicon"))),
+      br(),
+      br(), 
+      sliderInput("network_slider", 
+                  label = "Minimum correlation threshold:", 
+                  value = 0.5, 
+                  min = 0, 
+                  max = 1, 
+                  step = 0.05))
   })
   
   # get list of genes from text area
@@ -184,6 +187,7 @@ server <- function(input, output, session) {
   # outputs controls for network graph node selection
   output$corr_ui <- renderUI({
     genes <- rownames(subset_by_genes(network_data(), get_genes()))
+    req(genes)
     sidebarLayout(
       mainPanel(
         plotOutput("network_graph"), 
@@ -252,6 +256,7 @@ server <- function(input, output, session) {
   
   output$network_metrics <- renderDataTable({
     mat <- correlation_mat() 
+    req(mat)
     g <- create_network_graph(mat)
     
     degs <- degree(g)
@@ -283,9 +288,8 @@ server <- function(input, output, session) {
   
   # outputs raw pvalues histogram
   output$de_pval_hist <- renderPlot({
-    data <- de_data()
-    req(data)
-    g <- plot_de_pvals(data)
+    req(de_data())
+    g <- plot_de_pvals(de_data())
     return(g)
   })
   
@@ -318,13 +322,14 @@ server <- function(input, output, session) {
   output$counts_param <- renderUI({
     req(counts_data())
     tagList(
+      br(),
       sliderInput("counts_var_slider",
-                  label = "min percentile of variance",
-                  min = 1,
+                  label = "Include genes with variance in the top X percentile:",
+                  min = 0,
                   value = 100,
                   max = 100),
       sliderInput("counts_nonzero_slider",
-                  label = "min non-zero samples",
+                  label = "Include genes expressed in at least X samples:",
                   min = 0,
                   value = 0,
                   max = ncol(counts_data()) - 1, # first col is GeneID
@@ -404,12 +409,12 @@ server <- function(input, output, session) {
         plotOutput("counts_pca")),
       sidebarPanel(
         selectInput("counts_pca_select1",
-                    label = "first PC",
+                    label = "First PC",
                     choices = pcs,
                     selected = "PC1",
                     multiple = F),
         selectInput("counts_pca_select2",
-                    label = "second PC",
+                    label = "Second PC",
                     choices = pcs,
                     selected = "PC2",
                     multiple = F),
@@ -487,7 +492,9 @@ server <- function(input, output, session) {
   # outputs samples table 
   output$samples_table_layout <- renderDataTable({
     req(samples_data())
-    return(samples_data())},
+    samples <- samples_data() 
+    colnames(samples) <- fix_name(colnames(samples), single = F)
+    return(samples)},
     options = list(scrollX = T),
     rownames = F)
   
