@@ -16,19 +16,23 @@ library(igraph) # network analysis
 library(pheatmap) # heatmap
 library(stringr) # string capitalization
 
+options(shiny.maxRequestSize = 30*1024^2)
+
 # Define UI for application that draws a histogram
 ui <- fluidPage(
+    titlePanel("mRNA-Seq Expression profiling of human post-mortem BA9 brain tissue for Huntington's Disease and neurologically normal individuals"), 
      tabsetPanel(
        tabPanel("Sample Information Exploration",
                 sidebarLayout(
                   sidebarPanel(
                     fileInput("samples_file",
-                              "Please upload a sample information file.",
+                              "Please upload a sample information CSV file.",
                               multiple = F,
                               accept = ".csv"),
                     actionButton(inputId = "samples_upload_btn", 
                                  label = span("Upload File", 
-                                 icon("open-file", lib = "glyphicon")))),
+                                 icon("open-file", lib = "glyphicon"))), 
+                    width = 3),
                   mainPanel(
                     tabsetPanel(
                       tabPanel("Sample Summary",
@@ -43,13 +47,14 @@ ui <- fluidPage(
                 sidebarLayout(
                   sidebarPanel(
                     fileInput("counts_file",
-                              label = "Please upload a normalized RNA-seq counts file.",
+                              label = "Please upload a normalized RNA-seq counts CSV file.",
                               multiple = F,
                               accept = ".csv"),
                     actionButton("counts_upload_btn", 
                                  label = span("Upload File", 
                                  icon("open-file", lib = "glyphicon"))),
-                    uiOutput("counts_param")),
+                    uiOutput("counts_param"), 
+                    width = 3),
                   mainPanel(
                     tabsetPanel(
                       tabPanel("Data Summary",
@@ -66,12 +71,13 @@ ui <- fluidPage(
                 sidebarLayout(
                   sidebarPanel(
                     fileInput("de_file",
-                              label = "Please upload a differential expression results file.",
+                              label = "Please upload a differential expression results CSV file.",
                               accept = ".csv",
                               multiple = F),
                     actionButton("de_btn",
                                  label = span("Upload File", 
-                                 icon("open-file", lib = "glyphicon")))),
+                                 icon("open-file", lib = "glyphicon"))), 
+                    width = 3),
                   mainPanel(
                     tabsetPanel(
                       tabPanel("Differential Expression Results",
@@ -85,13 +91,15 @@ ui <- fluidPage(
         sidebarLayout(
           sidebarPanel(
               fileInput("network_file", 
-                        label = "Please upload a normalized RNA-seq counts file.", 
+                        label = "Please upload a normalized RNA-seq counts CSV file.", 
                         multiple = F, 
                         accept = ".csv"),
               actionButton("network_btn", 
                            label = span("Upload File", 
                            icon("open-file", lib = "glyphicon"))), 
-              uiOutput("network_ctrls")), 
+              uiOutput("network_ctrls"), 
+              # uiOutput("corr_ui"), # todo remove
+              width = 3), 
           mainPanel(
                 tabsetPanel(
                   tabPanel("Selected Genes Heatmaps", 
@@ -100,7 +108,9 @@ ui <- fluidPage(
                            plotOutput("network_heatmap")
                            ), 
                   tabPanel("Correlation Network", 
-                           uiOutput("corr_ui")),
+                           uiOutput("corr_ui")
+                           # plotOutput("network_graph") #todo remove
+                           ),
                   tabPanel("Network Metrics", 
                            dataTableOutput("network_metrics"))))))))
 
@@ -129,11 +139,11 @@ server <- function(input, output, session) {
   output$network_heatmap <- renderPlot({
     sbst <- subset_by_genes(network_data(), get_genes())
     if (nrow(sbst) > 35) {
-      h <- pheatmap(log2(sbst + 1), show_rownames = F, 
-                    main = "Heatmap of Expression of Selected Genes (log2-Transformed)")
+      h <- pheatmap(log10(sbst + 1), show_rownames = F, 
+                    main = "Heatmap of Expression of Selected Genes (log10-transformed)")
     } else {
-      h <- pheatmap(log2(sbst + 1), 
-                    main = "Heatmap of Expression of Selected Genes (log2-Transformed)")
+      h <- pheatmap(log10(sbst + 1), 
+                    main = "Heatmap of Expression of Selected Genes (log10-transformed)")
     }
     return(h)
   })  
@@ -148,15 +158,7 @@ server <- function(input, output, session) {
                     placeholder = "all genes"), 
       actionButton("network_genes_btn", 
                    label = span("Upload Gene List", 
-                   icon("upload", lib = "glyphicon"))),
-      br(),
-      br(), 
-      sliderInput("network_slider", 
-                  label = "Minimum correlation threshold:", 
-                  value = 0.5, 
-                  min = 0, 
-                  max = 1, 
-                  step = 0.05))
+                   icon("upload", lib = "glyphicon"))))
   })
   
   # get list of genes from text area
@@ -166,6 +168,7 @@ server <- function(input, output, session) {
     genes <- genes[[1]] %>% 
                   lapply(str_trim) %>%
                   unlist()
+    genes <- as.character(genes[genes != ""])
     return(genes)
   })
   
@@ -176,7 +179,8 @@ server <- function(input, output, session) {
     if (length(genes) == 0) {
       return("")
     }
-    not_found <- genes[! genes %in% data$GeneID]
+    # not_found <- genes[! genes %in% data$GeneID]
+    not_found <- genes[! genes %in% data[,1]]
     if (length(not_found) == 0) {
       return("")
     }
@@ -186,14 +190,26 @@ server <- function(input, output, session) {
   
   # outputs controls for network graph node selection
   output$corr_ui <- renderUI({
-    genes <- rownames(subset_by_genes(network_data(), get_genes()))
+    genes <- rownames(subset_by_genes(network_data(), get_genes())) %>% sort()
     req(genes)
     sidebarLayout(
-      mainPanel(
-        plotOutput("network_graph"), 
-        verbatimTextOutput("network_shortest")
-      ),
-      sidebarPanel(
+    mainPanel(
+      plotOutput("network_graph"),
+      verbatimTextOutput("network_shortest")
+    ),
+    sidebarPanel(
+    # tagList(
+      selectInput("net_layout", 
+                  label = "Graph Layout Style", 
+                  choices = c("Grid", "Tree", "Circle", "Star", "Random", 
+                              "Fruchterman-Reingold", "Kamada-Kawai"),
+                  selected = "Grid"), 
+      sliderInput("network_slider", 
+                  label = "Minimum correlation threshold:", 
+                  value = 0.5, 
+                  min = 0, 
+                  max = 1, 
+                  step = 0.05), 
         selectInput("node1", 
                     label = "Gene 1", 
                     choices = genes, 
@@ -203,11 +219,12 @@ server <- function(input, output, session) {
                     choices = genes, 
                     selected = genes[2]), 
         actionButton("sp_btn", 
-                     label = span("Find Shortest Path",
-                     icon("search", lib = "glyphicon")))))
+                     label = span("Find Shortest Path")),
+        width = 4), 
+    position = "right")
   })
 
-  correlation_mat <- function(rplc = T) { # should also filter by slider
+  correlation_mat <- function(rplc = T) {
     data <- network_data()
     genes <- get_genes()
     sbst <- subset_by_genes(data, genes)
@@ -224,12 +241,23 @@ server <- function(input, output, session) {
     return(mat)
   }
   
+ 
   # outputs correlation network graph
   output$network_graph <- renderPlot({
     mat <- correlation_mat()
     g <- create_network_graph(mat)
-    plot(simplify(g), vertex.label = colnames(mat))
-    
+    layout_style <- switch(input$net_layout, 
+                           "Grid" = layout_on_grid(g),
+                           "Tree" = layout_as_tree(g), 
+                           "Circle" = layout_in_circle(g),
+                           "Star" = layout_as_star(g),
+                           "Random" = layout_randomly(g), 
+                           "Fruchterman-Reingold"= layout_with_fr(g),
+                           "Kamada-Kawai" = layout_with_kk(g))
+    plot(simplify(g),
+         layout = layout_style,
+         vertex.size = degree(g, mode="all"),
+         asp = 0)
   })
   
   # outputs shortest path between two chosen nodes
@@ -314,7 +342,6 @@ server <- function(input, output, session) {
     counts = read.csv(file$datapath)
     genes <- counts$GeneID
     rownames(counts) <- genes
-    # counts <- counts[1:10, 1:11]
     return(counts)
   })
 
@@ -437,7 +464,7 @@ server <- function(input, output, session) {
     req(counts_data())
     filtered <- process_counts_filters(counts_data(), counts_summ_reactives$nonzeros,
                                        counts_summ_reactives$var_perc, 0)
-    mat <- log2(filtered[-1] + 1) %>% as.matrix()
+    mat <- log10(filtered[-1] + 1) %>% as.matrix()
     pheatmap(mat,
              clustering_distance_rows = "euclidean", # Clustering metric for rows
              clustering_distance_cols = "euclidean", # Clustering metric for columns
@@ -509,15 +536,18 @@ server <- function(input, output, session) {
     req(samples_data())
 
     samples  <- samples_data()
-    col_names = names(samples)[sapply(samples, is.numeric)]
+    col_names <- names(samples)[sapply(samples, is.numeric)]
+    names(col_names) <- fix_name(col_names)
+    col_names <- sort(col_names)
     sidebarLayout(
       mainPanel(plotOutput("samples_boxplot"),
+                plotOutput("samples_density1"),
+                plotOutput("samples_density2"),
                 plotOutput("samples_point1"),
-                plotOutput("samples_point2"),
-                plotOutput("samples_point3")),
+                plotOutput("samples_point2")),
       sidebarPanel(
         selectInput("samples_box_radio",
-                     label = "Choose a column",
+                     label = "Choose a column to plot:",
                      choices = col_names,
                      selected = "age_of_death"),
         actionButton("samples_boxplot_btn",
@@ -525,6 +555,18 @@ server <- function(input, output, session) {
                      icon("pencil", lib = "glyphicon")))))
   })
 
+  output$samples_density1 <- renderPlot({
+    req(samples_data())
+    g <- plot_samples_density(samples_data(), "age_of_death")
+    return(g)
+  })
+  
+  output$samples_density2 <- renderPlot({
+    req(samples_data())
+    g <- plot_samples_density(samples_data(), "pmi")
+    return(g)
+  })
+  
   # outputs samples boxplot
   output$samples_boxplot <- renderPlot({
     req(samples_data())
@@ -543,14 +585,6 @@ server <- function(input, output, session) {
   })
   
     output$samples_point2 <- renderPlot({
-      req(samples_data())
-      g <- plot_samples_scatter(samples_data(), xcol = "age_of_onset", ycol = "age_of_death", 
-                                xax = "Age of Onset", yax = "Age of Death", 
-                                title = "Age of Onset vs. Age of Death in Patient Samples")
-      return(g)
-  })
-  
-    output$samples_point3 <- renderPlot({
       req(samples_data())
       g <- plot_samples_scatter(samples_data(), xcol = "h_v_striatal_score",
                                 ycol = "h_v_cortical_score", colore = "vonsattel_grade", 
