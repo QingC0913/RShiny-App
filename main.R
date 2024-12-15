@@ -183,7 +183,6 @@ plot_samples_scatter <- function(samples, xcol, ycol, xax, yax, title, colore = 
     g <- g + geom_point(data = sbst, 
                         aes(x = !!sym(xcol), y = !!sym(ycol), 
                             color = as_factor(!!sym(colore)))) +
-      # scale_color_manual(values = c("#8402ab","darkturquoise"), 
       scale_color_manual(values = c("forestgreen","seagreen2"), 
                          name = fix_name(colore)) + 
       theme(legend.position = "bottom", 
@@ -198,22 +197,16 @@ plot_samples_scatter <- function(samples, xcol, ycol, xax, yax, title, colore = 
 }
 
 plot_samples_density <- function(samples, xax) {
-  data = samples %>% filter(diagnosis == "Huntington's_Disease")
-  data2 = samples %>% filter(diagnosis == "Neurologically_normal")
-  g <- ggplot() + 
-    geom_density(data = data, 
-                 mapping = aes(x = !!sym(xax)), 
-                 # fill="#69b3a2", alpha = 0.6) + 
-                 fill="forestgreen", alpha = 0.6) + 
-    geom_density(data = data2, 
-                 mapping = aes(x = !!sym(xax)), 
-                 # fill = "#3ad32d", alpha = 0.6) + 
-                 fill = "seagreen2", alpha = 0.6)+
+  g <- ggplot(samples) +
+    geom_density(aes(x = !!sym(xax), fill = !!sym("diagnosis")), alpha = 0.6) +  
+    scale_fill_manual(name = "Diagnosis",
+                       values = c("Neurologically_normal" = "seagreen2", "Huntington's_Disease" = "forestgreen",), 
+                       labels = c("Neurologically Normal", "Huntington's Disease")) +
     labs(x = fix_name(xax), 
          title = glue("Density Plot of Patients' {fix_name(xax)}")) +
     theme_classic() +
-    theme(plot.title = element_text(hjust=0.5, face = "bold", size = 13))
-    
+    theme(plot.title = element_text(hjust=0.5, face = "bold", size = 13),
+          legend.position = "bottom")
   return(g)
 }
 
