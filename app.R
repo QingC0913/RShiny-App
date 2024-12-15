@@ -22,6 +22,7 @@ options(shiny.maxRequestSize = 30*1024^2)
 
 # Define UI for application that draws a histogram
 ui <- fluidPage(
+  includeCSS("www/style.css"),
     titlePanel("mRNA-Seq Expression profiling of human post-mortem BA9 brain tissue for Huntington's Disease and neurologically normal individuals"), 
      tabsetPanel(
        tabPanel("Sample Information Exploration",
@@ -309,12 +310,14 @@ server <- function(input, output, session) {
     return(de)
   })
   
-  de_reactives <- reactiveValues(thresh = 0, 
+  de_reactives <- reactiveValues(fc_thresh = 1.2, 
+                                 p_thresh = 0, 
                                  up = "forestgreen", 
                                  down = "seagreen2")
   
   observeEvent(input$de_volcano_btn, {
-    de_reactives$thresh <- input$padj_slider
+    de_reactives$fc_thresh <- as.numeric(input$log2_slider)
+    de_reactives$p_thresh <- as.numeric(input$padj_slider)
     de_reactives$up <- input$de_upreg_color 
     de_reactives$down <- input$de_downreg_color
   })
@@ -323,7 +326,8 @@ server <- function(input, output, session) {
   output$de_table <- renderDataTable({
     data <- de_data()
     req(data)
-    sbst <- data[data$padj < (10^ de_reactives$thresh), ]
+    sbst <- data[data$padj < (10^de_reactives$p_thresh), ]
+    sbst <- sbst[abs(sbst$log2FoldChange) > de_reactives$fc_thresh, ]
     return(sbst)},
     options = list(scrollX = T),
     rownames = F)
@@ -338,8 +342,14 @@ server <- function(input, output, session) {
       colourInput(inputId = "de_downreg_color", 
                   label = "Color for downregulated genes:", 
                   value = "seagreen2"),
+      sliderInput(inputId = "log2_slider", 
+                  label = "Filter by log2(Fold Change):", 
+                  min = 1, 
+                  max = 5, 
+                  step = 0.1,
+                  value = 1.2),
       sliderInput(inputId = "padj_slider", 
-                  label = "Magnitude of adjusted p-value:", 
+                  label = "Filter by magnitude of p-adjusted:", 
                   min = -40, 
                   max = 0, 
                   step = 1,
@@ -366,7 +376,8 @@ server <- function(input, output, session) {
   # outputs DE volcano plot
   output$de_volcano <- renderPlot({
     req(de_data())
-    g <- plot_de_volcano(de_data(), de_reactives$thresh, de_reactives$up, de_reactives$down) 
+    g <- plot_de_volcano(de_data(), de_reactives$fc_thresh, de_reactives$p_thresh, 
+                         de_reactives$up, de_reactives$down) 
     return(g)
   })
     

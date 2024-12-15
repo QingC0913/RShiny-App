@@ -36,15 +36,15 @@ subset_by_genes <- function(data, genes) {
 
 
 #####                 DE TAB              #####
-plot_de_volcano <- function(data, padj_threshold, c1, c2) {
+plot_de_volcano <- function(data, fc_threshold, padj_threshold, c1, c2) {
   # Ensure padj is non-zero
   data <- data %>% mutate(padj = ifelse(padj == 0, 1e-300, padj))
   thresh <- 10 ^ padj_threshold
-  
+  print(fc_threshold)
   # Classify points
   data <- data %>% mutate(volc_plot_status = case_when(
-    padj < thresh & log2FoldChange < -1.2 ~ "DOWN",
-    padj < thresh & log2FoldChange > 1.2 ~ "UP",
+    padj < thresh & log2FoldChange < (fc_threshold * -1) ~ "DOWN",
+    padj < thresh & log2FoldChange > fc_threshold ~ "UP",
     .default = "NS"))
 
   # Set factor levels explicitly, allowing for empty levels
