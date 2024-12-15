@@ -107,15 +107,21 @@ plot_de_pvals <- function(data) {
 plot_counts_pca <- function(data, first, second) {
   pca_results <- get_pca_results(data[-1], x = T)
   vars <- get_pca_results(data[-1], x = F)
+  pca_results["diagnosis"] <- rep(c("C","H"), c(49, 20))
+  print(head(pca_results))
   g <- ggplot(pca_results) +
     geom_point(aes(x = !!sym(first),
-                   y = !!sym(second)), 
-               color = "forestgreen") +
+                   y = !!sym(second), 
+                   color = !!sym("diagnosis"))) +
     labs(x = glue("{first} ({round(vars[[first]], 2)}% variance explained)"),
          y = glue("{second} ({round(vars[[second]], 2)}% variance explained)"),
          title = glue("{first} vs. {second}")) +
     theme_classic() + 
-    theme(plot.title = element_text(hjust=0.5, face = "bold", size = 13))
+    scale_color_manual(name = "Diagnosis",
+                      values = c("C" = "seagreen2", "H" = "forestgreen"), 
+                      labels = c("Neurologically Normal", "Huntington's Disease")) + 
+    theme(legend.position = "bottom", 
+          plot.title = element_text(hjust=0.5, face = "bold", size = 13))
   return(g)
 }
 
@@ -136,7 +142,7 @@ plot_counts_scatter <- function(counts, val) {
   g <- ggplot(counts) + 
     theme_classic() +
     scale_color_manual(name = "Gene Passes Filters", 
-                       values = c("TRUE" = "seagreen2", 'FALSE' = "forestgreen"),
+                       values = c("TRUE" = "forestgreen", 'FALSE' = "seagreen2"),
                        labels = c("TRUE" = "True", "FALSE" = "False"), 
                        drop = F)
   if (val == 1) {
@@ -215,6 +221,7 @@ plot_samples_density <- function(samples, xax) {
                        values = c("Neurologically_normal" = "seagreen2", "Huntington's_Disease" = "forestgreen"), 
                        labels = c("Neurologically Normal", "Huntington's Disease")) +
     labs(x = fix_name(xax), 
+         y = "Density",
          title = glue("Density Plot of Patients' {fix_name(xax)}")) +
     theme_classic() +
     theme(plot.title = element_text(hjust=0.5, face = "bold", size = 13),
@@ -228,14 +235,17 @@ plot_samples_boxplot <- function(samples, selected_col) {
   if (selected_col %in% both) {
     g <- g +
       geom_boxplot(aes(x = diagnosis, y = !!sym(selected_col), fill = diagnosis)) + 
-      scale_fill_manual(values = c("seagreen2", "forestgreen")) 
+      scale_fill_manual(values = c("seagreen2", "forestgreen")) +
+      scale_x_discrete(labels = c("Huntington's_Disease" = "Huntington's Disease", 
+                                  "Neurologically_normal" = "Neurologically Normal"))
   } else {
       sbst <- samples %>% 
         filter(!is.na(!!sym(selected_col)))
       g <- ggplot(sbst, aes(x = diagnosis, y=!!sym(selected_col))) +
         geom_violin(width = 0.4, fill = "forestgreen") +
         geom_boxplot(width = 0.1, fill = "seagreen2") + 
-        geom_jitter(color= "black", size = 0.8)
+        geom_jitter(color= "black", size = 0.8) +
+        scale_x_discrete(labels = c("Huntington's_Disease" = "Huntington's Disease"))
   }
   g <- g + guides(fill = "none") + 
     theme_classic() + 

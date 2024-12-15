@@ -338,6 +338,7 @@ server <- function(input, output, session) {
   output$de_ui <- renderUI({
     req(de_data())
     tagList(
+      br(), 
       colourInput(inputId = "de_upreg_color", 
                   label = "Color for upregulated genes", 
                   value = "forestgreen"),
@@ -518,14 +519,58 @@ server <- function(input, output, session) {
              clustering_distance_cols = "euclidean", # Clustering metric for columns
              clustering_method = "complete",    # Hierarchical clustering method
              show_rownames = F, 
-             main = "Heatmap of Normalized RNA-seq Counts")
+             main = "Heatmap of Normalized & Log10 Transformed RNA-seq Counts")
   })
 
   #####               SAMPLES TAB            #####
   # outputs information about study
   output$samples_info <- renderUI({
-    "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
-  })
+    HTML("
+        <div></div>
+        <div>
+           This dataset is an mRNA expression profile 
+           conducted on post-mortem human dorsolateral 
+           prefrontal cortex tissue obtained from patients who had 
+           Huntington's Disease, alongside age- and sex-matched 
+           neurologically healthy control subjects. 
+         </div>
+         <div></div>
+         <div>
+           The dataset is available on NCBI's Gene Expression Omnibus 
+           (GEO) with the accession code 
+           <a href = 'https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE64810'>
+            GSE64810
+           </a>.  
+         </div>
+         <div>
+            mRNA expression counts files, including raw sequencing counts, DESeq2-normalized counts, 
+          and TPM/FPKM-normalized counts, are available, along with 
+          differential expression results analyzed with DESeq2. 
+         </div>
+         <div></div>
+         <div>
+            Relevant information to know: 
+            <ul>
+              <li>
+                <strong>PMI</strong>: post-mortem index, refers time interval 
+                between patient's time of death and the time that 
+                the deceased patient was examined. 
+              </li>
+              <li>
+                <strong>CGA</strong>: number of CGA-trinucletide repeats.
+              </li>
+              <li>
+                <strong>RIN</strong>: RNA Integrity Number, refers to quality
+                of RNA obtained before sequencing was conducted. 
+              </li>
+              <li>
+                <strong>Vonsattel grade</strong>: a measure of severity of 
+                neostriatal atrophy, named after Jean-Paul Vonsattel, M.D.
+                There are five grades, from 0 (indiscernible neuropathological abnormalities)
+                to 4 (severe neuropathological abnormalities).</li>
+            </ul>
+")
+    })
   
   # loads file data when submit button is pressed
   samples_data <- eventReactive(input$samples_upload_btn, {
