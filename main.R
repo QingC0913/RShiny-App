@@ -40,7 +40,6 @@ plot_de_volcano <- function(data, fc_threshold, padj_threshold, c1, c2) {
   # Ensure padj is non-zero
   data <- data %>% mutate(padj = ifelse(padj == 0, 1e-300, padj))
   thresh <- 10 ^ padj_threshold
-  print(fc_threshold)
   # Classify points
   data <- data %>% mutate(volc_plot_status = case_when(
     padj < thresh & log2FoldChange < (fc_threshold * -1) ~ "DOWN",
@@ -49,28 +48,24 @@ plot_de_volcano <- function(data, fc_threshold, padj_threshold, c1, c2) {
 
   # Set factor levels explicitly, allowing for empty levels
   data$volc_plot_status <- factor(data$volc_plot_status, levels = c("DOWN", 'NS', "UP"))
-  # Debugging information
-  print(levels(data$volc_plot_status)) 
-  
-  # Create the plot
+
   g <- ggplot(data) +
-    geom_point(aes(x = log2FoldChange,
-                   y = -log10(padj),
-                   colour = volc_plot_status)) +
-    theme_minimal() +
-    labs(x = expression(Log[2]("Fold Change")), 
-         y = expression(-Log[10](italic("padj"))),
-         title = "Volcano Plot of DESeq2 Differential Expression Results") + 
-    scale_color_manual(name = "Differential Expression Status",
-                       values = c("DOWN" = c2,  "UP" = c1, "NS" = "grey"), 
-                       labels = c("Downregulated", "Upregulated", "Not significant"), 
-                       drop = F) +
-    theme(legend.position = "bottom", 
-          plot.title = element_text(hjust=0.5, face = "bold", size = 13))
+  geom_point(aes(x = log2FoldChange,
+                 y = -log10(padj),
+                 colour = volc_plot_status)) +
+  theme_minimal() +
+  labs(x = expression(Log[2]("Fold Change")), 
+       y = expression(-Log[10](italic("padj"))),
+       title = "Volcano Plot of DESeq2 Differential Expression Results") + 
+  scale_color_manual(name = "Differential Expression Status",
+                     values = c("DOWN" = c2,  "UP" = c1, "NS" = "grey"), 
+                     labels = c("Downregulated", "Upregulated", "Not significant"), 
+                     drop = F) +
+  theme(legend.position = "bottom", 
+        plot.title = element_text(hjust=0.5, face = "bold", size = 13))
   
   return(g)
 }
-
 
 plot_de_log2fc <- function(data, padj_threshold = 0.10) {
   g <- data %>%
@@ -96,7 +91,7 @@ plot_de_pvals <- function(data) {
                    fill = "forestgreen",
                    bins = 50) +
     theme_minimal() + 
-    labs(x = expression(Log[2]("Fold Change")), 
+    labs(x = "Raw p-values", 
          y = "Count",
          title = "Histogram of raw pvalues obtained from DE analysis (control vs. Huntington's)") +
     theme(plot.title = element_text(hjust=0.5, face = "bold", size = 13))
@@ -108,7 +103,6 @@ plot_counts_pca <- function(data, first, second) {
   pca_results <- get_pca_results(data[-1], x = T)
   vars <- get_pca_results(data[-1], x = F)
   pca_results["diagnosis"] <- rep(c("C","H"), c(49, 20))
-  print(head(pca_results))
   g <- ggplot(pca_results) +
     geom_point(aes(x = !!sym(first),
                    y = !!sym(second), 

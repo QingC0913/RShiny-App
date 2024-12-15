@@ -93,7 +93,7 @@ ui <- fluidPage(
                                plotOutput("de_volcano"),
                                plotOutput("de_pval_hist"), 
                                plotOutput("de_log2fc_hist")))))),
-       tabPanel("Correlation Network Analysis", # todo later could join norm counts GeneID with symbol & ENS ids (and radio choose)
+       tabPanel("Correlation Network Analysis", 
         sidebarLayout(
           sidebarPanel(
               fileInput("network_file", 
@@ -104,7 +104,6 @@ ui <- fluidPage(
                            label = span("Upload File", 
                            icon("open-file", lib = "glyphicon"))), 
               uiOutput("network_ctrls"), 
-              # uiOutput("corr_ui"), # todo remove
               width = 3), 
           mainPanel(
                 tabsetPanel(
@@ -115,7 +114,6 @@ ui <- fluidPage(
                            ), 
                   tabPanel("Correlation Network", 
                            uiOutput("corr_ui")
-                           # plotOutput("network_graph") #todo remove
                            ),
                   tabPanel("Network Metrics", 
                            dataTableOutput("network_metrics"))))))))
@@ -142,6 +140,7 @@ server <- function(input, output, session) {
     return(h)
   })
   
+  # outputs correlation / counts heatmaps
   output$network_heatmap <- renderPlot({
     sbst <- subset_by_genes(network_data(), get_genes())
     if (nrow(sbst) > 35) {
@@ -245,7 +244,6 @@ server <- function(input, output, session) {
     }
     return(mat)
   }
-  
  
   # outputs correlation network graph
   output$network_graph <- renderPlot({
@@ -287,6 +285,7 @@ server <- function(input, output, session) {
     return(txt)
   })
   
+  # outputs table of network metrics
   output$network_metrics <- renderDataTable({
     mat <- correlation_mat() 
     req(mat)
@@ -312,6 +311,7 @@ server <- function(input, output, session) {
     return(de)
   })
   
+  # reactive variables for DE table / volcano plot filtering
   de_reactives <- reactiveValues(fc_thresh = 1.2, 
                                  p_thresh = 0, 
                                  up = "forestgreen", 
@@ -334,7 +334,7 @@ server <- function(input, output, session) {
     options = list(scrollX = T),
     rownames = F)
   
-  
+  # renders UI for volcano plot and DE table (filter by padj and log2FC)
   output$de_ui <- renderUI({
     req(de_data())
     tagList(
