@@ -15,6 +15,8 @@ library(DT) # datatable
 library(igraph) # network analysis 
 library(pheatmap) # heatmap
 library(stringr) # string capitalization
+library(colourpicker) # color inputs
+
 
 options(shiny.maxRequestSize = 30*1024^2)
 
@@ -77,6 +79,7 @@ ui <- fluidPage(
                     actionButton("de_btn",
                                  label = span("Upload File", 
                                  icon("open-file", lib = "glyphicon"))), 
+                    uiOutput("de_ui"),
                     width = 3),
                   mainPanel(
                     tabsetPanel(
@@ -84,9 +87,9 @@ ui <- fluidPage(
                                dataTableOutput("de_table")
                                ),
                       tabPanel("Visualizations", 
+                               plotOutput("de_volcano"),
                                plotOutput("de_pval_hist"), 
-                               plotOutput("de_log2fc_hist"), 
-                               plotOutput("de_volcano")))))),
+                               plotOutput("de_log2fc_hist")))))),
        tabPanel("Correlation Network Analysis", # todo later could join norm counts GeneID with symbol & ENS ids (and radio choose)
         sidebarLayout(
           sidebarPanel(
@@ -179,7 +182,6 @@ server <- function(input, output, session) {
     if (length(genes) == 0) {
       return("")
     }
-    # not_found <- genes[! genes %in% data$GeneID]
     not_found <- genes[! genes %in% data[,1]]
     if (length(not_found) == 0) {
       return("")
@@ -198,7 +200,6 @@ server <- function(input, output, session) {
       verbatimTextOutput("network_shortest")
     ),
     sidebarPanel(
-    # tagList(
       selectInput("net_layout", 
                   label = "Graph Layout Style", 
                   choices = c("Grid", "Tree", "Circle", "Star", "Random", 
@@ -224,6 +225,7 @@ server <- function(input, output, session) {
     position = "right")
   })
 
+  # correlation matrix 
   correlation_mat <- function(rplc = T) {
     data <- network_data()
     genes <- get_genes()
@@ -307,12 +309,45 @@ server <- function(input, output, session) {
     return(de)
   })
   
+  de_reactives <- reactiveValues(thresh = 0, 
+                                 up = "forestgreen", 
+                                 down = "seagreen2")
+  
+  observeEvent(input$de_volcano_btn, {
+    de_reactives$thresh <- input$padj_slider
+    de_reactives$up <- input$de_upreg_color 
+    de_reactives$down <- input$de_downreg_color
+  })
+  
   # outputs DE results data
   output$de_table <- renderDataTable({
-    req(de_data())
-    return(de_data())},
+    data <- de_data()
+    req(data)
+    sbst <- data[data$padj < (10^ de_reactives$thresh), ]
+    return(sbst)},
     options = list(scrollX = T),
     rownames = F)
+  
+  
+  output$de_ui <- renderUI({
+    req(de_data())
+    tagList(
+      colourInput(inputId = "de_upreg_color", 
+                  label = "Color for upregulated genes", 
+                  value = "forestgreen"),
+      colourInput(inputId = "de_downreg_color", 
+                  label = "Color for downregulated genes:", 
+                  value = "seagreen2"),
+      sliderInput(inputId = "padj_slider", 
+                  label = "Magnitude of adjusted p-value:", 
+                  min = -40, 
+                  max = 0, 
+                  step = 1,
+                  value = 0), 
+      actionButton(inputId = "de_volcano_btn", 
+                   label = span("Update Values", 
+                   icon("pencil", lib = "glyphicon"))))
+  })
   
   # outputs raw pvalues histogram
   output$de_pval_hist <- renderPlot({
@@ -322,7 +357,7 @@ server <- function(input, output, session) {
   })
   
   # outputs log2FC histogram, after filtering with padj threshold
-  output$de_log2fc_hist <- renderPlot({ #todo customizable padj threshold
+  output$de_log2fc_hist <- renderPlot({ 
     req(de_data())
     g <- plot_de_log2fc(de_data()) 
     return(g)
@@ -331,7 +366,7 @@ server <- function(input, output, session) {
   # outputs DE volcano plot
   output$de_volcano <- renderPlot({
     req(de_data())
-    g <- plot_de_volcano(de_data()) 
+    g <- plot_de_volcano(de_data(), de_reactives$thresh, de_reactives$up, de_reactives$down) 
     return(g)
   })
     

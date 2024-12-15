@@ -36,39 +36,52 @@ subset_by_genes <- function(data, genes) {
 
 
 #####                 DE TAB              #####
-plot_de_volcano <- function(data, padj_threshold = 0.10) {
-  data <- data %>% mutate(volc_plot_status = case_when(
-    padj < padj_threshold & log2FoldChange > 0 ~ "UP", 
-    padj < padj_threshold & log2FoldChange < 0 ~ "DOWN",
-    padj >= padj_threshold ~ "NS"))
+plot_de_volcano <- function(data, padj_threshold, c1, c2) {
+  # Ensure padj is non-zero
+  data <- data %>% mutate(padj = ifelse(padj == 0, 1e-300, padj))
+  thresh <- 10 ^ padj_threshold
   
-  g <- ggplot(data = subset(data, !is.na(volc_plot_status))) +
-    geom_point(aes(x = log2FoldChange, 
-                   y = -log10(padj), 
-                   color = volc_plot_status)) +
+  # Classify points
+  data <- data %>% mutate(volc_plot_status = case_when(
+    padj < thresh & log2FoldChange < -1.2 ~ "DOWN",
+    padj < thresh & log2FoldChange > 1.2 ~ "UP",
+    .default = "NS"))
+
+  # Set factor levels explicitly, allowing for empty levels
+  data$volc_plot_status <- factor(data$volc_plot_status, levels = c("DOWN", 'NS', "UP"))
+  # Debugging information
+  print(levels(data$volc_plot_status)) 
+  
+  # Create the plot
+  g <- ggplot(data) +
+    geom_point(aes(x = log2FoldChange,
+                   y = -log10(padj),
+                   colour = volc_plot_status)) +
     theme_minimal() +
-    labs(x = "Log2(Fold Change)", 
-         y = "-Log10(padj)",
-        title = "Volano plot of DESeq2 differential expression results (control vs. Huntington's)") +
+    labs(x = expression(Log[2]("Fold Change")), 
+         y = expression(-Log[10](italic("padj"))),
+         title = "Volcano Plot of DESeq2 Differential Expression Results") + 
     scale_color_manual(name = "Differential Expression Status",
-                       values = c("UP" = "forestgreen", "DOWN" = "seagreen2", "NS" = "grey"),
-                       labels = c("Upregulated", "Downregulated", "Not significant")) +
+                       values = c("DOWN" = c2,  "UP" = c1, "NS" = "grey"), 
+                       labels = c("Downregulated", "Upregulated", "Not significant"), 
+                       drop = F) +
     theme(legend.position = "bottom", 
           plot.title = element_text(hjust=0.5, face = "bold", size = 13))
+  
   return(g)
 }
+
 
 plot_de_log2fc <- function(data, padj_threshold = 0.10) {
   g <- data %>%
     filter(padj < padj_threshold) %>% 
     ggplot() +
     geom_histogram(aes(x = log2FoldChange), 
-                   # fill = "purple2", 
                    fill = "seagreen2", 
                    color = "black", 
                    bins = 100) +
     theme_minimal() + 
-    labs(x = "Log2(Fold Change)", 
+    labs(x = expression(Log[2]("Fold Change")), 
          y = "Count",
       title = "Histogram of Log2FoldChange for DE Genes (control vs. Huntington's)") +
     theme(plot.title = element_text(hjust=0.5, face = "bold", size = 13))
@@ -81,10 +94,9 @@ plot_de_pvals <- function(data) {
     geom_histogram(aes(x = pvalue), 
                    color = "black", 
                    fill = "forestgreen",
-                   # fill = "skyblue", 
                    bins = 50) +
     theme_minimal() + 
-    labs(x = "Log2(Fold Change)", 
+    labs(x = expression(Log[2]("Fold Change")), 
          y = "Count",
          title = "Histogram of raw pvalues obtained from DE analysis (control vs. Huntington's)") +
     theme(plot.title = element_text(hjust=0.5, face = "bold", size = 13))
@@ -125,8 +137,8 @@ plot_counts_scatter <- function(counts, val) {
     theme_classic() +
     scale_color_manual(name = "Gene Passes Filters", 
                        values = c("TRUE" = "seagreen2", 'FALSE' = "forestgreen"),
-                                  # "FALSE" = "skyblue"),
-                       labels = c("TRUE" = "True", "FALSE" = "False"))
+                       labels = c("TRUE" = "True", "FALSE" = "False"), 
+                       drop = F)
   if (val == 1) {
     g <- g + geom_point(aes(x = log2(!!sym("medians") + 1), 
                             y = log10(!!sym("variance") + 1), 
@@ -200,7 +212,7 @@ plot_samples_density <- function(samples, xax) {
   g <- ggplot(samples) +
     geom_density(aes(x = !!sym(xax), fill = !!sym("diagnosis")), alpha = 0.6) +  
     scale_fill_manual(name = "Diagnosis",
-                       values = c("Neurologically_normal" = "seagreen2", "Huntington's_Disease" = "forestgreen",), 
+                       values = c("Neurologically_normal" = "seagreen2", "Huntington's_Disease" = "forestgreen"), 
                        labels = c("Neurologically Normal", "Huntington's Disease")) +
     labs(x = fix_name(xax), 
          title = glue("Density Plot of Patients' {fix_name(xax)}")) +
