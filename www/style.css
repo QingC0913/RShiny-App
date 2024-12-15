@@ -1,0 +1,115 @@
+/* */
+h2 {
+    font-family: 'Arial', sans-serif; /* Change font */
+    font-size: 24px; /* Adjust font size */
+    font-weight: bold; /* Make the title bold */
+    color: black; /* Set text color */
+    /* background-color: #f8f9fa;  Optional background color */
+    background-color: #3dc2ec8f;
+    padding: 10px 20px; /* Add some padding */
+    text-align: center; /* Center the title */
+    border-radius: 8px; /* Rounded corners */
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+    margin-bottom: 20px; /* Space below the title */
+} /* title bar*/
+
+
+ul.nav.nav-tabs {
+    margin-bottom: 8px;
+    border-bottom: 2px solid #402E7A;
+} /* margin below row of tabs */
+
+div.input-group {
+    margin-bottom: 2px;
+} /* margin above upload progress bar */
+
+.nav-tabs>li.active>a, .nav-tabs>li.active>a:focus, .nav-tabs>li.active>a:hover {
+    color: #402E7A;
+    background-color: #fff;
+    border: 2px solid #402E7A;
+    border-bottom: 2px solid white;
+} /* active tabs*/
+
+li[role="presentation"] > a, .btn-default {
+    background-color: #402E7A;
+    color: white;
+} /* unhovered tabs & button style */
+
+li[role="presentation"] > a:hover {
+  background-color: #4C3BCF;
+} /* hover tabs */
+
+
+.btn-default.action-button:active, 
+.btn-default.action-button:focus,
+span.btn.btn-default.btn-file:active, 
+span.btn.btn-default.btn-file:focus {
+    background-color: white;
+    color: #402E7A;
+} /* clicked button */
+
+.btn-default:hover {
+    background-color: #4C3BCF;
+    color: white;
+} /* hovered button style */
+
+.irs--shiny .irs-bar {
+    border-top: 1px solid #4B70F5;
+    border-bottom: 1px solid #4B70F5;
+    background: #4B70F5;
+} /* slider color */
+
+.irs--shiny .irs-handle {
+    border: 2px solid white;
+    background-color: #4B70F5;
+} /* slider button */
+
+.progress-bar, .irs--shiny .irs-from, .irs--shiny .irs-to, .irs--shiny .irs-single {
+    background-color: #4B70F5;
+} /* files progress bar, slider max value bckgrnd*/
+
+.input-group .form-control, .irs--shiny .irs-min, .irs--shiny .irs-max {
+  background-color: white;
+} /* slider max, min,  form upload bar */ 
+
+.well {
+    background-color: #3dc2eca8;
+    border-radius: 15px;
+} /* sidebar background */
+
+th {
+}
+
+th.dt-right.sorting.sorting_asc::before, 
+th.dt-right.sorting.sorting_desc::after, 
+th.sorting.sorting_asc::before, 
+th.sorting.sorting_desc::after {
+  /*  color: #4B70F5; */
+    color: #3dc2eca8;
+} /* table sorting arrow */
+
+.dataTables_wrapper .dataTables_paginate .paginate_button.current, 
+.dataTables_wrapper .dataTables_paginate .paginate_button.current:hover, 
+.dataTables_wrapper .dataTables_paginate .paginate_button:hover {
+    background: #4B70F5;
+    color: white;
+} /* pagination selected & hover DT */
+
+.selectize-dropdown-content .option.selected {
+   background-color: #402E7A;
+   color: white;
+} /* select dropdown selected*/
+
+.selectize-dropdown-content .option.active {
+  background-color: #4C3BCF;
+  color: white;
+} /* select dropdown hover */
+
+
+span.irs-grid-text {
+  color: white;
+}
+
+.colourpicker-input {
+    border: none;
+}

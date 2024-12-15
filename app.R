@@ -23,7 +23,7 @@ options(shiny.maxRequestSize = 30*1024^2)
 # Define UI for application that draws a histogram
 ui <- fluidPage(
   includeCSS("www/style.css"),
-    titlePanel("mRNA-Seq Expression profiling of human post-mortem BA9 brain tissue for Huntington's Disease and neurologically normal individuals"), 
+    titlePanel("mRNA-Seq Expression Profiling of Human Post-Mortem BA9 Brain Tissue for Huntington's Disease and Neurologically Normal Individuals"), 
      tabsetPanel(
        tabPanel("Sample Information Exploration",
                 sidebarLayout(
@@ -38,6 +38,8 @@ ui <- fluidPage(
                     width = 3),
                   mainPanel(
                     tabsetPanel(
+                      tabPanel("Study Information", 
+                               htmlOutput("samples_info")),
                       tabPanel("Sample Summary",
                                textOutput("samples_summary"),
                                tableOutput("samples_table_summary")),
@@ -520,6 +522,11 @@ server <- function(input, output, session) {
   })
 
   #####               SAMPLES TAB            #####
+  # outputs information about study
+  output$samples_info <- renderUI({
+    "Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum."
+  })
+  
   # loads file data when submit button is pressed
   samples_data <- eventReactive(input$samples_upload_btn, {
     file = input$samples_file
