@@ -21,12 +21,16 @@ Huntington’s Disease and age- and sex-matched neurologically healthy controls.
 
   **Input**: `GSE64810_series_matrix.csv`\
   **Processing**: `series.py`\
+  **Output**: `processed_series_matrix.csv`
+
+  **Input**: `processed_series_matrix.csv.csv`
+  **Processing**: `series.py`\
   **Output**: `processed_samples.csv`
   
 2. formatting in R
 
   **Input**: `processed_samples.csv`\
-  **Processing**: `preProcessing.Rmd`\
+  **Processing**: `preprocessing.Rmd`\
   **Output**: `samples_matrix.csv`
 
 ## Content:
