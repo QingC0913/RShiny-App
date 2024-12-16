@@ -557,7 +557,7 @@ server <- function(input, output, session) {
                 the deceased patient was examined. 
               </li>
               <li>
-                <strong>CGA</strong>: number of CGA-trinucletide repeats.
+                 <strong>CAG</strong>: number of CAG-trinucletide repeats in the Huntingtin (HTT) gene.
               </li>
               <li>
                 <strong>RIN</strong>: RNA Integrity Number, refers to quality

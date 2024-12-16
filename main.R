@@ -181,8 +181,8 @@ process_counts_summary <- function(counts, filtered) {
   tot_genes <- nrow(counts)
   filtered_genes <- nrow(filtered) 
   results[, 2] <- c(ncol(counts), tot_genes, 
-                    glue("{filtered_genes} ({filtered_genes/tot_genes*100}%)"), 
-                    glue("{tot_genes -  filtered_genes} ({(tot_genes - filtered_genes) / tot_genes * 100}%)" ))
+                    glue("{filtered_genes} ({round(filtered_genes/tot_genes*100, 2)}%)"), 
+                    glue("{tot_genes -  filtered_genes} ({round((tot_genes - filtered_genes) / tot_genes * 100, 2)}%)"))
   return(results)
 }
 
