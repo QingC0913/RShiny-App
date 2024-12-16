@@ -639,10 +639,10 @@ server <- function(input, output, session) {
     col_names <- sort(col_names)
     sidebarLayout(
       mainPanel(plotOutput("samples_boxplot"),
-                plotOutput("samples_density1"),
-                plotOutput("samples_density2"),
+                plotOutput("samples_density"),
                 plotOutput("samples_point1"),
-                plotOutput("samples_point2")),
+                plotOutput("samples_point2"),
+                plotOutput("samples_point3")),
       sidebarPanel(
         selectInput("samples_box_radio",
                      label = "Choose a column to plot:",
@@ -653,13 +653,13 @@ server <- function(input, output, session) {
                      icon("pencil", lib = "glyphicon")))))
   })
 
-  output$samples_density1 <- renderPlot({
+  output$samples_density <- renderPlot({
     req(samples_data())
     g <- plot_samples_density(samples_data(), "age_of_death")
     return(g)
   })
   
-  output$samples_density2 <- renderPlot({
+  output$samples_point3 <- renderPlot({
     req(samples_data())
     g <- plot_samples_density(samples_data(), "pmi")
     return(g)
@@ -681,8 +681,16 @@ server <- function(input, output, session) {
                               title = "Number of CAG Repeats vs. Age of Death in Patient Samples")
     return(g)
   })
+  output$samples_point2 <- renderPlot({
+    req(samples_data())
+    g <- plot_samples_scatter(samples_data(), 
+                              xcol = "cag", ycol = "age_of_onset", 
+                              xax = "Number of CAG Tri-nucleotide Repeats", yax = "Age of Onset",
+                              title = "Number of CAG Repeats vs. Age of Onset in Patient Samples")
+    return(g)
+  })
   
-    output$samples_point2 <- renderPlot({
+    output$samples_point3 <- renderPlot({
       req(samples_data())
       g <- plot_samples_scatter(samples_data(), xcol = "h_v_striatal_score",
                                 ycol = "h_v_cortical_score", colore = "vonsattel_grade", 
