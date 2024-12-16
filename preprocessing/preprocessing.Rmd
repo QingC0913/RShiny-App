@@ -1,0 +1,31 @@
+```{r}
+library(tidyverse)
+```
+
+Reads in `processed_samples.csv` and creates sample CSV
+```{r}
+# formatting as dataframe and coercing correct data types
+series_matrix <- read.csv("processed_samples.csv", header = F)
+names <- series_matrix[, 1] 
+samples <- series_matrix  %>% select(-V1) %>% t() %>% as.data.frame() 
+colnames(samples) <- names
+rownames(samples) <- NULL
+samples <- samples 
+write.csv(samples, "samples_matrix.csv", row.names = F)
+```
+
+```{r}
+norm_counts <- read.csv("norm_counts.csv")
+gene_info  <- read.csv("gene_info.csv")
+
+head(norm_counts)
+head(gene_info)
+gene_info <- gene_info %>% select(c(GeneID, Symbol, EnsemblGeneID))
+head(gene_info)
+joined <- norm_counts %>% left_join(gene_info, join_by("GeneID"))
+joined <- joined %>% select(c(Symbol, EnsemblGeneID, GeneID), everything())
+head(joined)
+write.csv(joined, "norm_counts_joined.csv", row.names = F)
+
+```
+
