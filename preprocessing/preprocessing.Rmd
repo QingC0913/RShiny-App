@@ -13,19 +13,3 @@ rownames(samples) <- NULL
 samples <- samples 
 write.csv(samples, "samples_matrix.csv", row.names = F)
 ```
-
-```{r}
-norm_counts <- read.csv("norm_counts.csv")
-gene_info  <- read.csv("gene_info.csv")
-
-head(norm_counts)
-head(gene_info)
-gene_info <- gene_info %>% select(c(GeneID, Symbol, EnsemblGeneID))
-head(gene_info)
-joined <- norm_counts %>% left_join(gene_info, join_by("GeneID"))
-joined <- joined %>% select(c(Symbol, EnsemblGeneID, GeneID), everything())
-head(joined)
-write.csv(joined, "norm_counts_joined.csv", row.names = F)
-
-```
-
