@@ -38,7 +38,7 @@ ui <- fluidPage(
                     width = 3),
                   mainPanel(
                     tabsetPanel(
-                      tabPanel("Study Information", 
+                      tabPanel("Data Information", 
                                htmlOutput("samples_info")),
                       tabPanel("Sample Summary",
                                textOutput("samples_summary"),
