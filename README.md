@@ -23,7 +23,7 @@ Huntington’s Disease and age- and sex-matched neurologically healthy controls.
   **Processing**: `series.py`\
   **Output**: `processed_series_matrix.csv`
 
-  **Input**: `processed_series_matrix.csv.csv`
+  **Input**: `processed_series_matrix.csv.csv`\
   **Processing**: `series.py`\
   **Output**: `processed_samples.csv`
   
